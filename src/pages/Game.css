@@ -596,3 +596,220 @@
         transform: translateY(-10px);
     }
 }
+
+/* Update Game Play Layout to 3 columns */
+.game-play-layout {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    /* Ensure no max-width constraints */
+    height: 100vh;
+    gap: 20px;
+    padding: 10px;
+    /* Reduce padding to use more space */
+    box-sizing: border-box;
+}
+
+/* Ensure Shop and Inventory Sidebars have equal width/style */
+.shop-sidebar,
+.inventory-sidebar {
+    flex: 0 0 280px;
+    /* Specific width */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.inventory-sidebar h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #fbce1f;
+}
+
+/* Main Area - Center */
+.game-main-area {
+    flex: 1;
+    /* Takes remaining space */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    color: white;
+}
+
+/* Enhanced Header Stats */
+.game-header-stats {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    /* Position to the right */
+    left: auto;
+    /* Remove centering */
+    transform: none;
+    /* Remove centering transform */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Align text/items to the right */
+    gap: 5px;
+    width: auto;
+    /* Don't take full width */
+    pointer-events: none;
+    z-index: 20;
+}
+
+/* Make stats interactive (pointer-events: auto) if they have tooltips */
+.cps-display {
+    pointer-events: auto;
+}
+
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Align text to right */
+    gap: 0px;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.money-counter {
+    font-size: 3rem;
+    /* Much larger */
+    font-weight: 800;
+    color: #4ade80;
+    /* Greenish */
+    background: linear-gradient(to bottom, #4ade80, #22c55e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.total-clicks-label {
+    font-size: 1.2rem;
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
+.total-clicks-counter {
+    font-size: 1.5rem !important;
+    /* Override inline styles if any */
+    font-weight: 700 !important;
+    color: #94a3b8;
+    margin-top: 5px;
+}
+
+.cps-display {
+    font-size: 1.5rem !important;
+    font-weight: bold;
+    color: #fbce1f;
+    /* Gold */
+    background: rgba(0, 0, 0, 0.3);
+    padding: 5px 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: transform 0.2s;
+    border: 1px solid rgba(253, 224, 71, 0.3);
+}
+
+.cps-display:hover {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Inventory Styles */
+.inventory-display {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.inventory-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+}
+
+.inventory-item:hover {
+    transform: translateY(-2px);
+}
+
+.inventory-icon-container {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 15px;
+    overflow: hidden;
+}
+
+.inventory-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.inventory-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.inventory-name {
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.inventory-count {
+    font-size: 1.1rem;
+    color: #fbce1f;
+    font-weight: 800;
+}
+
+/* Trollface Spinner */
+.trollface-spin {
+    width: 150px;
+    height: 150px;
+    cursor: pointer;
+    animation: spin 12s linear infinite;
+    transition: animation-duration 0.5s ease-out;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.trollface-spin.fast {
+    animation-duration: 8s;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.clicker-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}

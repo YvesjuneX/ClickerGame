@@ -24,7 +24,7 @@ export const es = {
     clickerArea: "Zona de Clicker",
     startGame: "Haz Click Aquí para Comenzar",
     clickBtn: "CLICKEA YA",
-    autoClicker: "Auto Clicker",
+    autoClicker: "Nyan Cat",
     owned: "Comprados",
     inventory: "Inventario",
     logout: "Cerrar Sesión",
@@ -50,5 +50,7 @@ export const es = {
     // Shop
     shopTitle: "Tienda",
     buyUpgrade: "Comprar",
-    itemCost: "Costo: {cost}"
+    itemCost: "Costo: {cost}",
+    miamiItem: "Miami me lo confirmó",
+    miamiDesc: "Genera 5 clicks por segundo"
 };

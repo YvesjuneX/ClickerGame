@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
 import './Game.css'; // We'll create this for specific game styling
@@ -19,10 +19,14 @@ const Game = () => {
   const [gameStarted, setGameStarted] = useState(false);
   // State for Money
   const [money, setMoney] = useState(0);
+  const [totalClicks, setTotalClicks] = useState(0);
+  const [isSpinFast, setIsSpinFast] = useState(false);
 
   // State for Items
   const [autoClickers, setAutoClickers] = useState(0);
   const [autoClickerCost, setAutoClickerCost] = useState(25); // Initial cost
+  const [miamiCount, setMiamiCount] = useState(0);
+  const [miamiCost, setMiamiCost] = useState(250);
 
   // Mock trophies data
   const trophies = [
@@ -32,15 +36,25 @@ const Game = () => {
   ];
 
   // AutoClicker Effect
+  // AutoClicker Effect
+  // Calculate Total CPS
+  const totalCPS = autoClickers + (miamiCount * 5); // AutoClicker = 1 CPS, Miami = 5 CPS
+
+  // AutoClicker Effect
   useEffect(() => {
     let interval;
-    if (gameStarted && autoClickers > 0) {
+    if (gameStarted && totalCPS > 0) {
+      // Calculate delay to distribute clicks evenly over 1 second
+      // e.g., 4 CPS -> 1000/4 = 250ms delay -> +1 money every 250ms
+      const delay = Math.max(1, Math.floor(1000 / totalCPS));
+
       interval = setInterval(() => {
-        setMoney(prev => prev + autoClickers);
-      }, 1000); // 1 click per second per autoclicker
+        setMoney(prev => prev + 1);
+        setTotalClicks(prev => prev + 1);
+      }, delay);
     }
     return () => clearInterval(interval);
-  }, [gameStarted, autoClickers]);
+  }, [gameStarted, totalCPS]);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -59,6 +73,26 @@ const Game = () => {
       setGameStarted(true);
     } else {
       setMoney(prev => prev + 1);
+      setTotalClicks(prev => prev + 1);
+    }
+  };
+
+  const boostTimeoutRef = useRef(null);
+
+  const handleTrollClick = (e) => {
+    e.stopPropagation(); // Prevent triggering area click
+    if (gameStarted) {
+      // Double click effect
+      setMoney(prev => prev + 2);
+      setTotalClicks(prev => prev + 2);
+      // Clear existing timeout if any
+      if (boostTimeoutRef.current) {
+        clearTimeout(boostTimeoutRef.current);
+      }
+      // Speed up spin
+      setIsSpinFast(true);
+      // Set new timeout and store reference
+      boostTimeoutRef.current = setTimeout(() => setIsSpinFast(false), 500);
     }
   };
 
@@ -68,6 +102,14 @@ const Game = () => {
       setAutoClickers(prev => prev + 1);
       // Increase cost by 20% each time (rounded)
       setAutoClickerCost(prev => Math.floor(prev * 1.5));
+    }
+  };
+
+  const buyMiamiItem = () => {
+    if (money >= miamiCost) {
+      setMoney(prev => prev - miamiCost);
+      setMiamiCount(prev => prev + 1);
+      setMiamiCost(prev => Math.floor(prev * 1.5));
     }
   };
 
@@ -92,7 +134,7 @@ const Game = () => {
               <h2>{t('shopTitle')} (${money})</h2>
               <div className="shop-items">
                 {/* AutoClicker Item */}
-                <div className="shop-item">
+                <div className="shop-item" title="Generates 1 click per second">
                   <span>{t('autoClicker')}</span>
                   <button
                     className="buy-btn"
@@ -102,10 +144,22 @@ const Game = () => {
                     {t('buyUpgrade')} (${autoClickerCost})
                   </button>
                 </div>
-                {/* Placeholder Item 2 */}
-                <div className="shop-item">
-                  <span>Item 2</span>
-                  <button className="buy-btn" disabled={!gameStarted}>{t('buyUpgrade')} ({t('itemCost').replace('{cost}', '50')})</button>
+                {/* Miami Item */}
+                <div className="shop-item" title={t('miamiDesc')}>
+                  <span>{t('miamiItem')}</span>
+                  {autoClickers >= 5 ? (
+                    <button
+                      className="buy-btn"
+                      disabled={!gameStarted || money < miamiCost}
+                      onClick={buyMiamiItem}
+                    >
+                      {t('buyUpgrade')} (${miamiCost})
+                    </button>
+                  ) : (
+                    <button className="buy-btn" disabled>
+                      🔒 (Rev: 5 AutoClickers)
+                    </button>
+                  )}
                 </div>
               </div>
             </aside>
@@ -114,7 +168,16 @@ const Game = () => {
               onClick={handleAreaClick}
             >
               <div className={`game-header-stats ${!gameStarted ? 'dimmed' : ''}`}>
-                <span className="clicks-counter">Clicks: {money}</span>
+                <div className="stats-container">
+                  <span className="money-counter">${money}</span>
+                  <span className="total-clicks-counter">Total Clicks: {totalClicks}</span>
+                </div>
+                <div
+                  className="cps-display"
+                  title={`AutoClicker: ${autoClickers}/s\nMiami: ${miamiCount * 5}/s`}
+                >
+                  {totalCPS} CP/S
+                </div>
               </div>
 
               {!gameStarted ? (
@@ -125,21 +188,51 @@ const Game = () => {
                 <>
                   <div className="game-area-header-left">
                     <h1 className="game-area-title">{t('clickerArea')}</h1>
-                    <div className="inventory-display">
-                      <span>{t('inventory')}:</span>
-                      <div className="inventory-item">
-                        {t('autoClicker')}: {autoClickers}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Removed welcome message and instruction text */}
                   <div className="clicker-container">
-                    {/* Button removed, entire area is clickable */}
+                    <img
+                      src="/trollface.png"
+                      alt="Troll Face"
+                      className={`trollface-spin ${isSpinFast ? 'fast' : ''}`}
+                      onClick={handleTrollClick}
+                    />
                   </div>
                 </>
               )}
             </div>
+
+            {/* Inventory Sidebar (Right) */}
+            <aside className={`inventory-sidebar glass-card ${!gameStarted ? 'dimmed' : ''}`}>
+              <h2>{t('inventory')}</h2>
+              <div className="inventory-display">
+                {/* AutoClicker Inventory Item */}
+                <div className="inventory-item">
+                  <div className="inventory-icon-container">
+                    <img src="/nyancat.jpg" alt="Nyan Cat" className="inventory-icon" />
+                  </div>
+                  <div className="inventory-info">
+                    <span className="inventory-name">{t('autoClicker')}</span>
+                    <span className="inventory-count">{autoClickers}</span>
+                  </div>
+                </div>
+
+                {/* Miami Inventory Item */}
+                {miamiCount > 0 && (
+                  <div className="inventory-item">
+                    <div className="inventory-icon-container">
+                      <img src="/miami.jpg" alt="Miami" className="inventory-icon" />
+                    </div>
+                    <div className="inventory-info">
+                      <span className="inventory-name">{t('miamiItem')}</span>
+                      <span className="inventory-count">{miamiCount}</span>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </aside>
           </div>
         );
       case 'config':
