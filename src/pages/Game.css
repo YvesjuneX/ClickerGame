@@ -813,3 +813,29 @@
     align-items: center;
     flex: 1;
 }
+
+/* Debug Button */
+.debug-btn {
+    pointer-events: auto;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    border: 2px solid #ff4500;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+    margin-top: 10px;
+}
+
+.debug-btn:hover {
+    background: linear-gradient(135deg, #ff4500, #ff6b35);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(255, 69, 0, 0.6);
+}
+
+.debug-btn:active {
+    transform: scale(0.95);
+}

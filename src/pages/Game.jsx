@@ -27,6 +27,8 @@ const Game = () => {
   const [autoClickerCost, setAutoClickerCost] = useState(25); // Initial cost
   const [miamiCount, setMiamiCount] = useState(0);
   const [miamiCost, setMiamiCost] = useState(250);
+  const [chillGuyCount, setChillGuyCount] = useState(0);
+  const [chillGuyCost, setChillGuyCost] = useState(2500);
 
   // Mock trophies data
   const trophies = [
@@ -38,7 +40,7 @@ const Game = () => {
   // AutoClicker Effect
   // AutoClicker Effect
   // Calculate Total CPS
-  const totalCPS = autoClickers + (miamiCount * 5); // AutoClicker = 1 CPS, Miami = 5 CPS
+  const totalCPS = autoClickers + (miamiCount * 5) + (chillGuyCount * 25); // AutoClicker = 1 CPS, Miami = 5 CPS, Chill Guy = 25 CPS
 
   // AutoClicker Effect
   useEffect(() => {
@@ -113,6 +115,14 @@ const Game = () => {
     }
   };
 
+  const buyChillGuy = () => {
+    if (money >= chillGuyCost) {
+      setMoney(prev => prev - chillGuyCost);
+      setChillGuyCount(prev => prev + 1);
+      setChillGuyCost(prev => Math.floor(prev * 1.5));
+    }
+  };
+
   const renderContent = () => {
     switch (gameState) {
       case 'menu':
@@ -161,6 +171,23 @@ const Game = () => {
                     </button>
                   )}
                 </div>
+                {/* Chill Guy Item */}
+                <div className="shop-item" title={t('chillGuyDesc')}>
+                  <span>{t('chillGuyItem')}</span>
+                  {miamiCount >= 5 ? (
+                    <button
+                      className="buy-btn"
+                      disabled={!gameStarted || money < chillGuyCost}
+                      onClick={buyChillGuy}
+                    >
+                      {t('buyUpgrade')} (${chillGuyCost})
+                    </button>
+                  ) : (
+                    <button className="buy-btn" disabled>
+                      🔒 (Rev: 5 Miami)
+                    </button>
+                  )}
+                </div>
               </div>
             </aside>
             <div
@@ -171,10 +198,17 @@ const Game = () => {
                 <div className="stats-container">
                   <span className="money-counter">${money}</span>
                   <span className="total-clicks-counter">Total Clicks: {totalClicks}</span>
+                  <button
+                    className="debug-btn"
+                    onClick={(e) => { e.stopPropagation(); setMoney(prev => prev + 50000); }}
+                    title="Debug: Add $50,000"
+                  >
+                    🐛 +$50K
+                  </button>
                 </div>
                 <div
                   className="cps-display"
-                  title={`AutoClicker: ${autoClickers}/s\nMiami: ${miamiCount * 5}/s`}
+                  title={`AutoClicker: ${autoClickers}/s\nMiami: ${miamiCount * 5}/s\nChill Guy: ${chillGuyCount * 25}/s`}
                 >
                   {totalCPS} CP/S
                 </div>
@@ -227,6 +261,19 @@ const Game = () => {
                     <div className="inventory-info">
                       <span className="inventory-name">{t('miamiItem')}</span>
                       <span className="inventory-count">{miamiCount}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Chill Guy Inventory Item */}
+                {chillGuyCount > 0 && (
+                  <div className="inventory-item">
+                    <div className="inventory-icon-container">
+                      <img src="/chillguy.jpg" alt="Chill Guy" className="inventory-icon" />
+                    </div>
+                    <div className="inventory-info">
+                      <span className="inventory-name">{t('chillGuyItem')}</span>
+                      <span className="inventory-count">{chillGuyCount}</span>
                     </div>
                   </div>
                 )}

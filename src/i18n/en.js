@@ -52,5 +52,7 @@ export const en = {
     buyUpgrade: "Buy",
     itemCost: "Cost: {cost}",
     miamiItem: "Miami Confirmed It",
-    miamiDesc: "Generates 5 clicks per second"
+    miamiDesc: "Generates 5 clicks per second",
+    chillGuyItem: "Chill Guy",
+    chillGuyDesc: "Generates 25 clicks per second"
 };
