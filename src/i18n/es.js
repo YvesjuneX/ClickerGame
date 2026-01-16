@@ -16,13 +16,17 @@ export const es = {
     enterPassword: "Introduce tu contraseña",
 
     // Menu
-    clickMe: "Click Me",
+    clickMe: "Iniciar Oleadas",
     configuration: "Configuración",
     language: "Idioma",
 
     // Game
     clickerArea: "Zona de Clicker",
+    startGame: "Haz Click Aquí para Comenzar",
     clickBtn: "CLICKEA YA",
+    autoClicker: "Auto Clicker",
+    owned: "Comprados",
+    inventory: "Inventario",
     logout: "Cerrar Sesión",
     logoutConfirmTitle: "¿Cerrar Sesión?",
     logoutConfirmMsg: "¿Estás seguro de que quieres volver a la pantalla de inicio?",
@@ -41,5 +45,10 @@ export const es = {
     // Settings
     volume: "Volumen",
     english: "English",
-    spanish: "Español"
+    spanish: "Español",
+
+    // Shop
+    shopTitle: "Tienda",
+    buyUpgrade: "Comprar",
+    itemCost: "Costo: {cost}"
 };

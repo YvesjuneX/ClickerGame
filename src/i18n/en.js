@@ -16,13 +16,17 @@ export const en = {
     enterPassword: "Enter your password",
 
     // Menu
-    clickMe: "Click Me",
+    clickMe: "Start Waves",
     configuration: "Configuration",
     language: "Language",
 
     // Game
     clickerArea: "Clicker Area",
+    startGame: "Click Here to Start",
     clickBtn: "CLICK ME",
+    autoClicker: "Auto Clicker",
+    owned: "Owned",
+    inventory: "Inventory",
     logout: "Log Out",
     logoutConfirmTitle: "Log Out?",
     logoutConfirmMsg: "Are you sure you want to return to the home screen?",
@@ -41,5 +45,10 @@ export const en = {
     // Settings
     volume: "Volume",
     english: "English",
-    spanish: "Español"
+    spanish: "Español",
+
+    // Shop
+    shopTitle: "Shop",
+    buyUpgrade: "Buy",
+    itemCost: "Cost: {cost}"
 };
