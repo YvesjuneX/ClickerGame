@@ -25,6 +25,7 @@ export const es = {
     startGame: "Haz Click Aquí para Comenzar",
     clickBtn: "CLICKEA YA",
     autoClicker: "Nyan Cat",
+    autoClickerDesc: "Genera 1 click por segundo",
     owned: "Comprados",
     inventory: "Inventario",
     logout: "Cerrar Sesión",
@@ -35,15 +36,34 @@ export const es = {
 
     // Trophies
     yourTrophies: "Tus Trofeos",
-    trophy1Name: "Primer Click",
-    trophy1Desc: "¡Hiciste click en el botón!",
-    trophy2Name: "100 Clicks",
-    trophy2Desc: "Hiciste 100 clicks",
-    trophy3Name: "Monstruo de las Galletas",
-    trophy3Desc: "Horneaste 1000 galletas",
+    achievementUnlocked: "¡Logro Desbloqueado!",
+
+    // Achievements
+    firstClickName: "Primer Click",
+    firstClickDesc: "¡Hiciste click en el botón!",
+    clicks100Name: "100 Clicks",
+    clicks100Desc: "Hiciste 100 clicks",
+    clicks1000Name: "Máquina de Clicks",
+    clicks1000Desc: "Hiciste 1,000 clicks",
+    clicks10000Name: "Click Master",
+    clicks10000Desc: "Hiciste 10,000 clicks",
+    firstPurchaseName: "Primera Compra",
+    firstPurchaseDesc: "Compraste tu primer mejora",
+    nyanArmyName: "Nyan Army",
+    nyanArmyDesc: "Tienes 5 Nyan Cats",
+    miamiVibesName: "Miami Vibes",
+    miamiVibesDesc: "Compraste tu primer Miami",
+    chillLifeName: "Chill Life",
+    chillLifeDesc: "Compraste tu primer Chill Guy",
+    richName: "Millonario",
+    richDesc: "Llegaste a $1,000,000",
+    billionaireName: "Billonario",
+    billionaireDesc: "Llegaste a $1,000,000,000",
 
     // Settings
     volume: "Volumen",
+    backgroundPlay: "Juego en segundo plano",
+    backgroundPlayDesc: "El juego continúa cuando no estás en la página",
     english: "English",
     spanish: "Español",
 
@@ -54,5 +74,8 @@ export const es = {
     miamiItem: "Miami me lo confirmó",
     miamiDesc: "Genera 5 clicks por segundo",
     chillGuyItem: "Chill Guy",
-    chillGuyDesc: "Genera 25 clicks por segundo"
+    chillGuyDesc: "Genera 25 clicks por segundo",
+    each: "Cada uno",
+    total: "Total",
+    produced: "Generado"
 };

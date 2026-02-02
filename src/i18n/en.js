@@ -25,6 +25,7 @@ export const en = {
     startGame: "Click Here to Start",
     clickBtn: "CLICK ME",
     autoClicker: "Nyan Cat",
+    autoClickerDesc: "Generates 1 click per second",
     owned: "Owned",
     inventory: "Inventory",
     logout: "Log Out",
@@ -35,15 +36,34 @@ export const en = {
 
     // Trophies
     yourTrophies: "Your Trophies",
-    trophy1Name: "First Click",
-    trophy1Desc: "You clicked the button!",
-    trophy2Name: "100 Clicks",
-    trophy2Desc: "Clicked 100 times",
-    trophy3Name: "Cookie Monster",
-    trophy3Desc: "Baked 1000 cookies",
+    achievementUnlocked: "Achievement Unlocked!",
+
+    // Achievements
+    firstClickName: "First Click",
+    firstClickDesc: "You clicked the button!",
+    clicks100Name: "100 Clicks",
+    clicks100Desc: "Clicked 100 times",
+    clicks1000Name: "Click Machine",
+    clicks1000Desc: "Clicked 1,000 times",
+    clicks10000Name: "Click Master",
+    clicks10000Desc: "Clicked 10,000 times",
+    firstPurchaseName: "First Purchase",
+    firstPurchaseDesc: "Bought your first upgrade",
+    nyanArmyName: "Nyan Army",
+    nyanArmyDesc: "Have 5 Nyan Cats",
+    miamiVibesName: "Miami Vibes",
+    miamiVibesDesc: "Bought your first Miami",
+    chillLifeName: "Chill Life",
+    chillLifeDesc: "Bought your first Chill Guy",
+    richName: "Millionaire",
+    richDesc: "Reached $1,000,000",
+    billionaireName: "Billionaire",
+    billionaireDesc: "Reached $1,000,000,000",
 
     // Settings
     volume: "Volume",
+    backgroundPlay: "Background Play",
+    backgroundPlayDesc: "Game continues when you're not on the page",
     english: "English",
     spanish: "Español",
 
@@ -54,5 +74,8 @@ export const en = {
     miamiItem: "Miami Confirmed It",
     miamiDesc: "Generates 5 clicks per second",
     chillGuyItem: "Chill Guy",
-    chillGuyDesc: "Generates 25 clicks per second"
+    chillGuyDesc: "Generates 25 clicks per second",
+    each: "Each",
+    total: "Total",
+    produced: "Produced"
 };

@@ -3,14 +3,29 @@ import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
 import './Game.css'; // We'll create this for specific game styling
 
+const formatNumber = (num) => {
+  if (num < 1000) return num.toLocaleString('es-ES');
+  if (num < 1000000) {
+    const thousands = num / 1000;
+    return thousands.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'K';
+  }
+  if (num < 1000000000) {
+    const millions = num / 1000000;
+    return millions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'M';
+  }
+  const billions = num / 1000000000;
+  return billions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'B';
+};
+
 const Game = () => {
   console.log('Game Component Rendered');
   const { user, logout } = useUser();
   const { t, language, switchLanguage } = useLanguage(); // Use Context
   const [gameState, setGameState] = useState('menu'); // menu, play, config, language
 
-  // Settings State
+// Settings State
   const [volume, setVolume] = useState(50);
+  const [backgroundPlay, setBackgroundPlay] = useState(true); // Default: enabled
   // Removed local language state
 
   // UI State
@@ -20,43 +35,115 @@ const Game = () => {
   // State for Money
   const [money, setMoney] = useState(0);
   const [totalClicks, setTotalClicks] = useState(0);
-  const [isSpinFast, setIsSpinFast] = useState(false);
+  const [isClicked, setIsClicked] = useState(false); // Changed from isSpinFast
 
   // State for Items
   const [autoClickers, setAutoClickers] = useState(0);
   const [autoClickerCost, setAutoClickerCost] = useState(25); // Initial cost
+  const [autoClickersProduced, setAutoClickersProduced] = useState(0); // Lifetime produced
+
   const [miamiCount, setMiamiCount] = useState(0);
   const [miamiCost, setMiamiCost] = useState(250);
+  const [miamiProduced, setMiamiProduced] = useState(0); // Lifetime produced
+
   const [chillGuyCount, setChillGuyCount] = useState(0);
   const [chillGuyCost, setChillGuyCost] = useState(2500);
+  const [chillGuyProduced, setChillGuyProduced] = useState(0); // Lifetime produced
 
-  // Mock trophies data
-  const trophies = [
-    { id: 1, name: t('trophy1Name'), description: t('trophy1Desc'), unlocked: true },
-    { id: 2, name: t('trophy2Name'), description: t('trophy2Desc'), unlocked: false },
-    { id: 3, name: t('trophy3Name'), description: t('trophy3Desc'), unlocked: false },
+  const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+  const [achievementNotification, setAchievementNotification] = useState(null);
+
+  const achievements = [
+    { id: 'first_click', name: t('firstClickName'), description: t('firstClickDesc'), target: 1, current: totalClicks, type: 'clicks' },
+    { id: '100_clicks', name: t('clicks100Name'), description: t('clicks100Desc'), target: 100, current: totalClicks, type: 'clicks' },
+    { id: '1000_clicks', name: t('clicks1000Name'), description: t('clicks1000Desc'), target: 1000, current: totalClicks, type: 'clicks' },
+    { id: '10000_clicks', name: t('clicks10000Name'), description: t('clicks10000Desc'), target: 10000, current: totalClicks, type: 'clicks' },
+    { id: 'first_purchase', name: t('firstPurchaseName'), description: t('firstPurchaseDesc'), target: 1, current: autoClickers, type: 'count' },
+    { id: '5_auto_clickers', name: t('nyanArmyName'), description: t('nyanArmyDesc'), target: 5, current: autoClickers, type: 'count' },
+    { id: 'first_miami', name: t('miamiVibesName'), description: t('miamiVibesDesc'), target: 1, current: miamiCount, type: 'count' },
+    { id: 'first_chill_guy', name: t('chillLifeName'), description: t('chillLifeDesc'), target: 1, current: chillGuyCount, type: 'count' },
+    { id: 'millionaire', name: t('richName'), description: t('richDesc'), target: 1000000, current: money, type: 'money' },
+    { id: 'billionaire', name: t('billionaireName'), description: t('billionaireDesc'), target: 1000000000, current: money, type: 'money' },
   ];
 
-  // AutoClicker Effect
+  const getProgressText = (achievement) => {
+    const remaining = Math.max(0, achievement.target - achievement.current);
+    const progress = Math.min(100, (achievement.current / achievement.target) * 100);
+    return { remaining, progress };
+  };
+
+  useEffect(() => {
+    if (!gameStarted) return;
+
+    achievements.forEach(achievement => {
+      if (!unlockedAchievements.includes(achievement.id) && achievement.current >= achievement.target) {
+        setUnlockedAchievements(prev => [...prev, achievement.id]);
+        setAchievementNotification({
+          id: achievement.id,
+          name: achievement.name,
+          description: achievement.description
+        });
+        setTimeout(() => setAchievementNotification(null), 4000);
+      }
+    });
+  }, [money, totalClicks, autoClickers, miamiCount, chillGuyCount, gameStarted]);
+
   // AutoClicker Effect
   // Calculate Total CPS
   const totalCPS = autoClickers + (miamiCount * 5) + (chillGuyCount * 25); // AutoClicker = 1 CPS, Miami = 5 CPS, Chill Guy = 25 CPS
 
-  // AutoClicker Effect
+// AutoClicker Effect
+  // AutoClicker Effect (Delta Time Logic)
   useEffect(() => {
     let interval;
     if (gameStarted && totalCPS > 0) {
-      // Calculate delay to distribute clicks evenly over 1 second
-      // e.g., 4 CPS -> 1000/4 = 250ms delay -> +1 money every 250ms
-      const delay = Math.max(1, Math.floor(1000 / totalCPS));
-
+      // Run frequently (e.g., 10 TPS) for smooth UI in foreground.
+      // In background, browser throttles to ~1 TPS, but logic handles it via Delta Time.
       interval = setInterval(() => {
-        setMoney(prev => prev + 1);
-        setTotalClicks(prev => prev + 1);
-      }, delay);
+        // Check if page is visible and background play is disabled
+        const isPageVisible = !document.hidden;
+        const shouldPlay = backgroundPlay || isPageVisible;
+        
+        if (!shouldPlay) {
+          // Don't update time when paused to prevent large jumps when resuming
+          return;
+        }
+        
+        const now = Date.now();
+        const dt = (now - lastTimeRef.current) / 1000; // time elapsed in seconds
+        lastTimeRef.current = now;
+
+        if (dt > 0) {
+          const amountToProduce = totalCPS * dt;
+          accumulatorRef.current += amountToProduce;
+
+          const wholeAmount = Math.floor(accumulatorRef.current);
+
+          if (wholeAmount > 0) {
+            accumulatorRef.current -= wholeAmount;
+
+            setMoney(prev => prev + wholeAmount);
+            setTotalClicks(prev => prev + wholeAmount);
+
+            // Distribute credit for lifetime stats based on proportional contribution
+            if (autoClickers > 0) {
+              setAutoClickersProduced(prev => prev + (wholeAmount * (autoClickers / totalCPS)));
+            }
+            if (miamiCount > 0) {
+              setMiamiProduced(prev => prev + (wholeAmount * ((miamiCount * 5) / totalCPS)));
+            }
+            if (chillGuyCount > 0) {
+              setChillGuyProduced(prev => prev + (wholeAmount * ((chillGuyCount * 25) / totalCPS)));
+            }
+          }
+        }
+      }, 16);
+    } else {
+      // If game not started or 0 CPS, keep time updated so we don't jump when CPS starts
+      lastTimeRef.current = Date.now();
     }
     return () => clearInterval(interval);
-  }, [gameStarted, totalCPS]);
+  }, [gameStarted, totalCPS, autoClickers, miamiCount, chillGuyCount, backgroundPlay]);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -73,6 +160,8 @@ const Game = () => {
   const handleAreaClick = () => {
     if (!gameStarted) {
       setGameStarted(true);
+      // Reset time anchor immediately when game starts to prevent jump
+      lastTimeRef.current = Date.now();
     } else {
       setMoney(prev => prev + 1);
       setTotalClicks(prev => prev + 1);
@@ -81,20 +170,88 @@ const Game = () => {
 
   const boostTimeoutRef = useRef(null);
 
+  // Refs for Delta Time Logic
+  const lastTimeRef = useRef(Date.now());
+  const accumulatorRef = useRef(0);
+
+// Reset time anchor when game keeps pausing/unpausing if we had pause logic, 
+  // but for now main dependency is gameStarted.
+  useEffect(() => {
+    if (gameStarted) {
+      lastTimeRef.current = Date.now();
+    }
+  }, [gameStarted]);
+
+  // Handle visibility change to reset time reference when resuming
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (gameStarted && !document.hidden && backgroundPlay) {
+        // Reset time reference when page becomes visible to prevent large jumps
+        lastTimeRef.current = Date.now();
+        accumulatorRef.current = 0;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [gameStarted, backgroundPlay]);
+
+  // Nyan Cat Visuals State
+  const [floatingCats, setFloatingCats] = useState([]);
+
+  // Nyan Cat Spawning Logic
+  useEffect(() => {
+    if (!gameStarted || autoClickers === 0) return;
+
+    // Logic: Scale max cats logarithmically with autoClickers
+    // log(2) ~= 0.7 -> max 3
+    // log(10) ~= 2.3 -> max 6
+    // log(50) ~= 3.9 -> max 9
+    const maxCats = 2 + Math.floor(Math.log(autoClickers + 1) * 2);
+
+    const spawnInterval = setInterval(() => {
+      setFloatingCats(prev => {
+        if (prev.length >= maxCats) return prev;
+
+        // Chance to spawn depends on how empty it is compared to max
+        if (Math.random() > 0.4) return prev; // 60% skip chance to add randomness
+
+        // Avoid center (30%-70%) to not overlap Troll Face
+        const isTop = Math.random() > 0.5;
+        const top = isTop ? Math.random() * 30 : (Math.random() * 30 + 70);
+
+        const newCat = {
+          id: Date.now() + Math.random(),
+          top: top,
+          duration: Math.random() * 5 + 7, // 7s to 12s speed (Slower for majesty)
+          size: Math.random() * 60 + 90 // Larger: 90px to 150px
+        };
+        return [...prev, newCat];
+      });
+    }, 1000); // Check every second
+
+    return () => clearInterval(spawnInterval);
+  }, [gameStarted, autoClickers]);
+
+  const removeFloatingCat = (id) => {
+    setFloatingCats(prev => prev.filter(cat => cat.id !== id));
+  };
+
   const handleTrollClick = (e) => {
     e.stopPropagation(); // Prevent triggering area click
     if (gameStarted) {
       // Double click effect
       setMoney(prev => prev + 2);
       setTotalClicks(prev => prev + 2);
-      // Clear existing timeout if any
+
+      // Clear existing timeout to reset animation if clicked fast
       if (boostTimeoutRef.current) {
         clearTimeout(boostTimeoutRef.current);
       }
-      // Speed up spin
-      setIsSpinFast(true);
-      // Set new timeout and store reference
-      boostTimeoutRef.current = setTimeout(() => setIsSpinFast(false), 500);
+
+      // Trigger click animation
+      setIsClicked(true);
+      boostTimeoutRef.current = setTimeout(() => setIsClicked(false), 100);
     }
   };
 
@@ -123,6 +280,78 @@ const Game = () => {
     }
   };
 
+  // Tooltip State
+  const [tooltip, setTooltip] = useState({ show: false, type: null, content: '', x: 0, y: 0, direction: 'right' });
+
+  const handleMouseEnter = (e, type, direction = 'right', staticContent = null) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = 0;
+    let y = 0;
+
+    if (direction === 'right') {
+      x = rect.right + 15;
+      y = rect.top + (rect.height / 2);
+    } else {
+      // Left positioning
+      x = rect.left - 15;
+      y = rect.top + (rect.height / 2);
+    }
+
+    setTooltip({
+      show: true,
+      type,
+      content: staticContent, // For simple static tooltips if needed
+      direction,
+      x,
+      y
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip(prev => ({ ...prev, show: false, type: null }));
+  };
+
+  // Helper to generate dynamic content based on type
+  const getTooltipContent = () => {
+    if (!tooltip.show) return '';
+
+    const { type, content } = tooltip;
+
+    if (content) return content; // Fallback for static content
+
+    if (type === 'autoClickerShop') return t('autoClickerDesc');
+    if (type === 'miamiShop') return t('miamiDesc');
+    if (type === 'chillGuyShop') return t('chillGuyDesc');
+
+    if (type === 'cps') {
+      const parts = [];
+      if (autoClickers > 0) parts.push(`AutoClicker: ${formatNumber(autoClickers)}/s`);
+      if (miamiCount > 0) parts.push(`Miami: ${formatNumber(miamiCount * 5)}/s`);
+      if (chillGuyCount > 0) parts.push(`Chill Guy: ${formatNumber(chillGuyCount * 25)}/s`);
+      return parts.length > 0 ? parts.join('\n') : "0 CP/S";
+    }
+
+    if (type === 'autoClickerInv') {
+      const individual = 1;
+      const total = autoClickers * individual;
+      return `${t('autoClicker')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(autoClickersProduced))}`;
+    }
+
+    if (type === 'miamiInv') {
+      const individual = 5;
+      const total = miamiCount * individual;
+      return `${t('miamiItem')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(miamiProduced))}`;
+    }
+
+    if (type === 'chillGuyInv') {
+      const individual = 25;
+      const total = chillGuyCount * individual;
+      return `${t('chillGuyItem')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(chillGuyProduced))}`;
+    }
+
+    return '';
+  };
+
   const renderContent = () => {
     switch (gameState) {
       case 'menu':
@@ -141,29 +370,37 @@ const Game = () => {
               <button className="back-to-menu-btn sidebar-back-btn" onClick={() => setGameState('menu')} disabled={!gameStarted}>
                 ← {t('backToMenu')}
               </button>
-              <h2>{t('shopTitle')} (${money})</h2>
+              <h2>{t('shopTitle')}</h2>
               <div className="shop-items">
                 {/* AutoClicker Item */}
-                <div className="shop-item" title="Generates 1 click per second">
+                <div
+                  className={`shop-item ${money < autoClickerCost ? 'unaffordable' : ''}`}
+                  onMouseEnter={(e) => handleMouseEnter(e, 'autoClickerShop', 'right')}
+                  onMouseLeave={handleMouseLeave}
+                >
                   <span>{t('autoClicker')}</span>
                   <button
                     className="buy-btn"
                     disabled={!gameStarted || money < autoClickerCost}
                     onClick={buyAutoClicker}
                   >
-                    {t('buyUpgrade')} (${autoClickerCost})
+                    {t('buyUpgrade')} (${formatNumber(autoClickerCost)})
                   </button>
                 </div>
                 {/* Miami Item */}
-                <div className="shop-item" title={t('miamiDesc')}>
+                <div
+                  className={`shop-item ${money < miamiCost ? 'unaffordable' : ''}`}
+                  onMouseEnter={(e) => handleMouseEnter(e, 'miamiShop', 'right')}
+                  onMouseLeave={handleMouseLeave}
+                >
                   <span>{t('miamiItem')}</span>
                   {autoClickers >= 5 ? (
-                    <button
-                      className="buy-btn"
-                      disabled={!gameStarted || money < miamiCost}
-                      onClick={buyMiamiItem}
-                    >
-                      {t('buyUpgrade')} (${miamiCost})
+                      <button
+                        className="buy-btn"
+                        disabled={!gameStarted || money < miamiCost}
+                        onClick={buyMiamiItem}
+                      >
+                        {t('buyUpgrade')} (${formatNumber(miamiCost)})
                     </button>
                   ) : (
                     <button className="buy-btn" disabled>
@@ -172,15 +409,19 @@ const Game = () => {
                   )}
                 </div>
                 {/* Chill Guy Item */}
-                <div className="shop-item" title={t('chillGuyDesc')}>
+                <div
+                  className={`shop-item ${money < chillGuyCost ? 'unaffordable' : ''}`}
+                  onMouseEnter={(e) => handleMouseEnter(e, 'chillGuyShop', 'right')}
+                  onMouseLeave={handleMouseLeave}
+                >
                   <span>{t('chillGuyItem')}</span>
                   {miamiCount >= 5 ? (
-                    <button
-                      className="buy-btn"
-                      disabled={!gameStarted || money < chillGuyCost}
-                      onClick={buyChillGuy}
-                    >
-                      {t('buyUpgrade')} (${chillGuyCost})
+                      <button
+                        className="buy-btn"
+                        disabled={!gameStarted || money < chillGuyCost}
+                        onClick={buyChillGuy}
+                      >
+                        {t('buyUpgrade')} (${formatNumber(chillGuyCost)})
                     </button>
                   ) : (
                     <button className="buy-btn" disabled>
@@ -196,8 +437,8 @@ const Game = () => {
             >
               <div className={`game-header-stats ${!gameStarted ? 'dimmed' : ''}`}>
                 <div className="stats-container">
-                  <span className="money-counter">${money}</span>
-                  <span className="total-clicks-counter">Total Clicks: {totalClicks}</span>
+                  <span className="money-counter">${formatNumber(money)}</span>
+                  <span className="total-clicks-counter">Total Clicks: {formatNumber(totalClicks)}</span>
                   <button
                     className="debug-btn"
                     onClick={(e) => { e.stopPropagation(); setMoney(prev => prev + 50000); }}
@@ -208,9 +449,10 @@ const Game = () => {
                 </div>
                 <div
                   className="cps-display"
-                  title={`AutoClicker: ${autoClickers}/s\nMiami: ${miamiCount * 5}/s\nChill Guy: ${chillGuyCount * 25}/s`}
+                  onMouseEnter={(e) => handleMouseEnter(e, 'cps', 'left')}
+                  onMouseLeave={handleMouseLeave}
                 >
-                  {totalCPS} CP/S
+                  {formatNumber(totalCPS)} CP/S
                 </div>
               </div>
 
@@ -220,16 +462,28 @@ const Game = () => {
                 </div>
               ) : (
                 <>
-                  <div className="game-area-header-left">
-                    <h1 className="game-area-title">{t('clickerArea')}</h1>
-                  </div>
+                  {/* Floating Nyan Cats */}
+                  {floatingCats.map(cat => (
+                    <img
+                      key={cat.id}
+                      src="/nyancat.gif"
+                      className="floating-nyan-cat"
+                      style={{
+                        top: `${cat.top}%`,
+                        width: `${cat.size}px`,
+                        animation: `flyRight ${cat.duration}s linear forwards`
+                      }}
+                      onAnimationEnd={() => removeFloatingCat(cat.id)}
+                      alt=""
+                    />
+                  ))}
 
                   {/* Removed welcome message and instruction text */}
                   <div className="clicker-container">
                     <img
-                      src="/trollface.png"
+                      src="/trollFace.png"
                       alt="Troll Face"
-                      className={`trollface-spin ${isSpinFast ? 'fast' : ''}`}
+                      className={`troll-face ${isClicked ? 'clicked' : ''}`}
                       onClick={handleTrollClick}
                     />
                   </div>
@@ -242,38 +496,52 @@ const Game = () => {
               <h2>{t('inventory')}</h2>
               <div className="inventory-display">
                 {/* AutoClicker Inventory Item */}
-                <div className="inventory-item">
-                  <div className="inventory-icon-container">
-                    <img src="/nyancat.jpg" alt="Nyan Cat" className="inventory-icon" />
+                {autoClickers > 0 && (
+                  <div
+                    className="inventory-item"
+                    onMouseEnter={(e) => handleMouseEnter(e, 'autoClickerInv', 'left')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="inventory-icon-container">
+                      <img src="/nyancat.jpg" alt="Nyan Cat" className="inventory-icon" />
+                    </div>
+                    <div className="inventory-info">
+                      <span className="inventory-name">{t('autoClicker')}</span>
+                      <span className="inventory-count">{formatNumber(autoClickers)}</span>
+                    </div>
                   </div>
-                  <div className="inventory-info">
-                    <span className="inventory-name">{t('autoClicker')}</span>
-                    <span className="inventory-count">{autoClickers}</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Miami Inventory Item */}
                 {miamiCount > 0 && (
-                  <div className="inventory-item">
+                  <div
+                    className="inventory-item"
+                    onMouseEnter={(e) => handleMouseEnter(e, 'miamiInv', 'left')}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <div className="inventory-icon-container">
                       <img src="/miami.jpg" alt="Miami" className="inventory-icon" />
                     </div>
                     <div className="inventory-info">
                       <span className="inventory-name">{t('miamiItem')}</span>
-                      <span className="inventory-count">{miamiCount}</span>
+                      <span className="inventory-count">{formatNumber(miamiCount)}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Chill Guy Inventory Item */}
                 {chillGuyCount > 0 && (
-                  <div className="inventory-item">
+                  <div
+                    className="inventory-item"
+                    onMouseEnter={(e) => handleMouseEnter(e, 'chillGuyInv', 'left')}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <div className="inventory-icon-container">
                       <img src="/chillguy.jpg" alt="Chill Guy" className="inventory-icon" />
                     </div>
                     <div className="inventory-info">
                       <span className="inventory-name">{t('chillGuyItem')}</span>
-                      <span className="inventory-count">{chillGuyCount}</span>
+                      <span className="inventory-count">{formatNumber(chillGuyCount)}</span>
                     </div>
                   </div>
                 )}
@@ -282,7 +550,7 @@ const Game = () => {
             </aside>
           </div>
         );
-      case 'config':
+case 'config':
         return (
           <div className="settings-area">
             <button className="nav-arrow-btn" onClick={() => setGameState('menu')}>←</button>
@@ -296,6 +564,18 @@ const Game = () => {
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
               />
+            </div>
+            <div className="setting-item">
+              <label>{t('backgroundPlay')}</label>
+              <p className="setting-description">{t('backgroundPlayDesc')}</p>
+              <div className="toggle-container">
+                <button 
+                  className={`toggle-btn ${backgroundPlay ? 'active' : ''}`}
+                  onClick={() => setBackgroundPlay(!backgroundPlay)}
+                >
+                  {backgroundPlay ? 'ON' : 'OFF'}
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -360,16 +640,63 @@ const Game = () => {
       {/* Trophies View */}
       {showTrophies && (
         <div className="glass-card trophies-view">
-          <button className="close-trophies" onClick={() => setShowTrophies(false)}>X</button>
-          <h2>{t('yourTrophies')}</h2>
+          <div className="trophies-header">
+            <h2>{t('yourTrophies')}</h2>
+            <button className="close-trophies" onClick={() => setShowTrophies(false)}>✕</button>
+          </div>
+          <div className="trophies-progress-summary">
+            <span className="progress-text">{unlockedAchievements.length} / {achievements.length} Desbloqueados</span>
+            <div className="progress-bar-container">
+              <div className="progress-bar-fill" style={{ width: `${(unlockedAchievements.length / achievements.length) * 100}%` }}></div>
+            </div>
+          </div>
           <div className="trophies-grid">
-            {trophies.map(trophy => (
-              <div key={trophy.id} className={`trophy-card ${trophy.unlocked ? 'unlocked' : 'locked'}`}>
-                <div className="trophy-icon">🏆</div>
-                <h3>{trophy.name}</h3>
-                <p>{trophy.description}</p>
-              </div>
-            ))}
+            {achievements.map(achievement => {
+              const isUnlocked = unlockedAchievements.includes(achievement.id);
+              const { remaining, progress } = getProgressText(achievement);
+              return (
+                <div key={achievement.id} className={`trophy-card ${isUnlocked ? 'unlocked' : 'locked'}`}>
+                  <div className="trophy-icon">{isUnlocked ? '🏆' : '🔒'}</div>
+                  <h3>{achievement.name}</h3>
+                  <p>{achievement.description}</p>
+                  {isUnlocked ? (
+                    <span className="trophy-date">Desbloqueado</span>
+                  ) : (
+                    <div className="trophy-progress">
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+                      </div>
+                      <span className="progress-remaining">Faltan: {formatNumber(remaining)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Global Tooltip */}
+      {tooltip.show && (
+        <div
+          className={`global-tooltip ${tooltip.direction}`}
+          style={{
+            left: tooltip.x,
+            top: tooltip.y
+          }}
+        >
+          {getTooltipContent()}
+        </div>
+      )}
+
+      {/* Achievement Notification - Play Store Style */}
+      {achievementNotification && (
+        <div className="achievement-notification">
+          <div className="achievement-icon">🏆</div>
+          <div className="achievement-content">
+            <span className="achievement-title">{t('achievementUnlocked')}</span>
+            <span className="achievement-name">{achievementNotification.name}</span>
+            <span className="achievement-desc">{achievementNotification.description}</span>
           </div>
         </div>
       )}
