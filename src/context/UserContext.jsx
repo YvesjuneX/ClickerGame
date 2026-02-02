@@ -13,20 +13,54 @@ export const UserProvider = ({ children }) => {
     }
   }, []);
 
-  const login = (username, password) => {
-    // Mock login - in a real app this would call an API
-    // For now, valid if username is not empty
-    if (!username) return false;
-    
-    const newUser = { name: username, isGuest: false };
-    setUser(newUser);
-    localStorage.setItem('clicker_user', JSON.stringify(newUser));
-    return true;
+  const login = async (username, password) => {
+    try {
+      const response = await fetch('http://localhost:3002/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const newUser = { ...data.user, isGuest: false };
+        setUser(newUser);
+        localStorage.setItem('clicker_user', JSON.stringify(newUser));
+        return true;
+      } else {
+        alert(data.error || 'Login failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Error connecting to server');
+      return false;
+    }
   };
 
-  const register = (username, password) => {
-    // Mock register
-    return login(username, password);
+  const register = async (username, password) => {
+    try {
+      const response = await fetch('http://localhost:3002/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Auto login after register
+        return login(username, password);
+      } else {
+        alert(data.error || 'Registration failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Register error:', error);
+      alert('Error connecting to server');
+      return false;
+    }
   };
 
   const playAsGuest = () => {
@@ -35,13 +69,33 @@ export const UserProvider = ({ children }) => {
     localStorage.setItem('clicker_user', JSON.stringify(guestUser));
   };
 
+  const saveUserData = async (gameData) => {
+    if (!user || user.isGuest) return; // Don't save for guests or if not logged in
+
+    // 1. Update Local State immediately (Optimistic UI)
+    const updatedUser = { ...user, gameData };
+    setUser(updatedUser);
+    localStorage.setItem('clicker_user', JSON.stringify(updatedUser));
+
+    try {
+      await fetch('http://localhost:3002/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, gameData }),
+      });
+      console.log('Progress saved remotely');
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('clicker_user');
   };
 
   return (
-    <UserContext.Provider value={{ user, login, register, playAsGuest, logout }}>
+    <UserContext.Provider value={{ user, login, register, playAsGuest, logout, saveUserData }}>
       {children}
     </UserContext.Provider>
   );

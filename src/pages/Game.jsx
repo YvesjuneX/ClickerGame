@@ -19,11 +19,11 @@ const formatNumber = (num) => {
 
 const Game = () => {
   console.log('Game Component Rendered');
-  const { user, logout } = useUser();
+  const { user, logout, saveUserData } = useUser();
   const { t, language, switchLanguage } = useLanguage(); // Use Context
   const [gameState, setGameState] = useState('menu'); // menu, play, config, language
 
-// Settings State
+  // Settings State
   const [volume, setVolume] = useState(50);
   const [backgroundPlay, setBackgroundPlay] = useState(true); // Default: enabled
   // Removed local language state
@@ -39,16 +39,34 @@ const Game = () => {
 
   // State for Items
   const [autoClickers, setAutoClickers] = useState(0);
-  const [autoClickerCost, setAutoClickerCost] = useState(25); // Initial cost
-  const [autoClickersProduced, setAutoClickersProduced] = useState(0); // Lifetime produced
+  const [autoClickerCost, setAutoClickerCost] = useState(25);
+  const [autoClickersProduced, setAutoClickersProduced] = useState(0);
 
   const [miamiCount, setMiamiCount] = useState(0);
   const [miamiCost, setMiamiCost] = useState(250);
-  const [miamiProduced, setMiamiProduced] = useState(0); // Lifetime produced
+  const [miamiProduced, setMiamiProduced] = useState(0);
 
   const [chillGuyCount, setChillGuyCount] = useState(0);
   const [chillGuyCost, setChillGuyCost] = useState(2500);
-  const [chillGuyProduced, setChillGuyProduced] = useState(0); // Lifetime produced
+  const [chillGuyProduced, setChillGuyProduced] = useState(0);
+
+  // Upgrade Items (Cookie Clicker style)
+  const [clickPowerLevel, setClickPowerLevel] = useState(0);
+  const [clickPowerCost, setClickPowerCost] = useState(100);
+
+  const [autoClickerLevel, setAutoClickerLevel] = useState(0);
+  const [autoClickerLevelCost, setAutoClickerLevelCost] = useState(500);
+
+  const [miamiLevel, setMiamiLevel] = useState(0);
+  const [miamiLevelCost, setMiamiLevelCost] = useState(2500);
+
+  const [chillGuyLevel, setChillGuyLevel] = useState(0);
+  const [chillGuyLevelCost, setChillGuyLevelCost] = useState(10000);
+
+  const [clickTurboCost, setClickTurboCost] = useState(500);
+  const [nyanBoostCost, setNyanBoostCost] = useState(10000);
+  const [miamiOverdriveCost, setMiamiOverdriveCost] = useState(25000);
+  const [chillAmplifierCost, setChillAmplifierCost] = useState(50000);
 
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [achievementNotification, setAchievementNotification] = useState(null);
@@ -88,11 +106,21 @@ const Game = () => {
     });
   }, [money, totalClicks, autoClickers, miamiCount, chillGuyCount, gameStarted]);
 
-  // AutoClicker Effect
-  // Calculate Total CPS
-  const totalCPS = autoClickers + (miamiCount * 5) + (chillGuyCount * 25); // AutoClicker = 1 CPS, Miami = 5 CPS, Chill Guy = 25 CPS
+  // Calculate Total CPS with upgrades
+  // AutoClicker = 1 CPS, Miami = 5 CPS, Chill Guy = 25 CPS
+  // Each upgrade level doubles the base CPS of that unit type
+  const autoClickerMultiplier = Math.pow(2, autoClickerLevel);
+  const miamiMultiplier = Math.pow(2, miamiLevel);
+  const chillGuyMultiplier = Math.pow(2, chillGuyLevel);
 
-// AutoClicker Effect
+  const totalCPS = (autoClickers * autoClickerMultiplier) +
+    (miamiCount * 5 * miamiMultiplier) +
+    (chillGuyCount * 25 * chillGuyMultiplier);
+
+  // Click power: each level adds +1 click, doubled by upgrade level
+  const clickPower = (1 + clickPowerLevel) * Math.pow(2, clickPowerLevel);
+
+  // AutoClicker Effect
   // AutoClicker Effect (Delta Time Logic)
   useEffect(() => {
     let interval;
@@ -103,12 +131,12 @@ const Game = () => {
         // Check if page is visible and background play is disabled
         const isPageVisible = !document.hidden;
         const shouldPlay = backgroundPlay || isPageVisible;
-        
+
         if (!shouldPlay) {
           // Don't update time when paused to prevent large jumps when resuming
           return;
         }
-        
+
         const now = Date.now();
         const dt = (now - lastTimeRef.current) / 1000; // time elapsed in seconds
         lastTimeRef.current = now;
@@ -145,11 +173,119 @@ const Game = () => {
     return () => clearInterval(interval);
   }, [gameStarted, totalCPS, autoClickers, miamiCount, chillGuyCount, backgroundPlay]);
 
+  // Load Game Data on Mount/Login
+  useEffect(() => {
+    if (user && user.gameData && Object.keys(user.gameData).length > 0) {
+      console.log('Loading save data...', user.gameData);
+      const data = user.gameData;
+
+      // Economy
+      if (data.money !== undefined) setMoney(data.money);
+      if (data.totalClicks !== undefined) setTotalClicks(data.totalClicks);
+
+      // Items
+      if (data.autoClickers !== undefined) setAutoClickers(data.autoClickers);
+      if (data.autoClickerCost !== undefined) setAutoClickerCost(data.autoClickerCost);
+      if (data.autoClickersProduced !== undefined) setAutoClickersProduced(data.autoClickersProduced);
+
+      if (data.miamiCount !== undefined) setMiamiCount(data.miamiCount);
+      if (data.miamiCost !== undefined) setMiamiCost(data.miamiCost);
+      if (data.miamiProduced !== undefined) setMiamiProduced(data.miamiProduced);
+
+      if (data.chillGuyCount !== undefined) setChillGuyCount(data.chillGuyCount);
+      if (data.chillGuyCost !== undefined) setChillGuyCost(data.chillGuyCost);
+      if (data.chillGuyProduced !== undefined) setChillGuyProduced(data.chillGuyProduced);
+
+      // Upgrades
+      if (data.clickPowerLevel !== undefined) setClickPowerLevel(data.clickPowerLevel);
+      if (data.clickPowerCost !== undefined) setClickPowerCost(data.clickPowerCost);
+
+      if (data.autoClickerLevel !== undefined) setAutoClickerLevel(data.autoClickerLevel);
+      if (data.autoClickerLevelCost !== undefined) setAutoClickerLevelCost(data.autoClickerLevelCost);
+
+      if (data.miamiLevel !== undefined) setMiamiLevel(data.miamiLevel);
+      if (data.miamiLevelCost !== undefined) setMiamiLevelCost(data.miamiLevelCost);
+
+      if (data.chillGuyLevel !== undefined) setChillGuyLevel(data.chillGuyLevel);
+      if (data.chillGuyLevelCost !== undefined) setChillGuyLevelCost(data.chillGuyLevelCost);
+
+      if (data.clickTurboCost !== undefined) setClickTurboCost(data.clickTurboCost);
+      if (data.nyanBoostCost !== undefined) setNyanBoostCost(data.nyanBoostCost);
+      if (data.miamiOverdriveCost !== undefined) setMiamiOverdriveCost(data.miamiOverdriveCost);
+      if (data.chillAmplifierCost !== undefined) setChillAmplifierCost(data.chillAmplifierCost);
+
+      // Achievements
+      if (data.unlockedAchievements !== undefined) setUnlockedAchievements(data.unlockedAchievements);
+
+      // Settings
+      if (data.volume !== undefined) setVolume(data.volume);
+      if (data.backgroundPlay !== undefined) setBackgroundPlay(data.backgroundPlay);
+      if (data.language) switchLanguage(data.language);
+
+    }
+  }, [user]); // Runs when user updates (login)
+
+  // Ref to hold latest game data for auto-save without stale closures
+  const gameDataRef = useRef({});
+
+  useEffect(() => {
+    gameDataRef.current = {
+      money,
+      totalClicks,
+      autoClickers,
+      autoClickerCost,
+      autoClickersProduced,
+      miamiCount,
+      miamiCost,
+      miamiProduced,
+      chillGuyCount,
+      chillGuyCost,
+      chillGuyProduced,
+      clickPowerLevel,
+      clickPowerCost,
+      autoClickerLevel,
+      autoClickerLevelCost,
+      miamiLevel,
+      miamiLevelCost,
+      chillGuyLevel,
+      chillGuyLevelCost,
+      clickTurboCost,
+      nyanBoostCost,
+      miamiOverdriveCost,
+      chillAmplifierCost,
+      unlockedAchievements,
+      volume,
+      backgroundPlay,
+      language
+    };
+  }, [
+    money, totalClicks, autoClickers, miamiCount, chillGuyCount,
+    clickPowerLevel, autoClickerLevel, miamiLevel, chillGuyLevel,
+    unlockedAchievements, volume, backgroundPlay, language
+  ]);
+
+  // Auto-Save Interval (30 seconds)
+  useEffect(() => {
+    if (!gameStarted || !user || user.isGuest) return;
+
+    const saveInterval = setInterval(async () => {
+      console.log('Auto-saving progress...');
+      await saveUserData(gameDataRef.current);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(saveInterval);
+  }, [gameStarted, user, saveUserData]);
+
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
   };
 
-  const confirmLogout = () => {
+
+
+  const confirmLogout = async () => {
+    // Look at the latest ref data to ensure we don't save stale state
+    console.log('Saving before logout...');
+    await saveUserData(gameDataRef.current);
     logout();
   };
 
@@ -160,10 +296,9 @@ const Game = () => {
   const handleAreaClick = () => {
     if (!gameStarted) {
       setGameStarted(true);
-      // Reset time anchor immediately when game starts to prevent jump
       lastTimeRef.current = Date.now();
     } else {
-      setMoney(prev => prev + 1);
+      setMoney(prev => prev + clickPower);
       setTotalClicks(prev => prev + 1);
     }
   };
@@ -174,7 +309,7 @@ const Game = () => {
   const lastTimeRef = useRef(Date.now());
   const accumulatorRef = useRef(0);
 
-// Reset time anchor when game keeps pausing/unpausing if we had pause logic, 
+  // Reset time anchor when game keeps pausing/unpausing if we had pause logic, 
   // but for now main dependency is gameStarted.
   useEffect(() => {
     if (gameStarted) {
@@ -185,7 +320,7 @@ const Game = () => {
   // Handle visibility change to reset time reference when resuming
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (gameStarted && !document.hidden && backgroundPlay) {
+      if (gameStarted && !document.hidden) {
         // Reset time reference when page becomes visible to prevent large jumps
         lastTimeRef.current = Date.now();
         accumulatorRef.current = 0;
@@ -194,7 +329,7 @@ const Game = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [gameStarted, backgroundPlay]);
+  }, [gameStarted]);
 
   // Nyan Cat Visuals State
   const [floatingCats, setFloatingCats] = useState([]);
@@ -280,6 +415,38 @@ const Game = () => {
     }
   };
 
+  const buyClickTurbo = () => {
+    if (money >= clickTurboCost) {
+      setMoney(prev => prev - clickTurboCost);
+      setClickPowerLevel(prev => prev + 1);
+      setClickTurboCost(prev => Math.floor(prev * 2.5));
+    }
+  };
+
+  const buyNyanBoost = () => {
+    if (money >= nyanBoostCost && autoClickers >= 10) {
+      setMoney(prev => prev - nyanBoostCost);
+      setAutoClickerLevel(prev => prev + 1);
+      setNyanBoostCost(prev => Math.floor(prev * 2.5));
+    }
+  };
+
+  const buyMiamiOverdrive = () => {
+    if (money >= miamiOverdriveCost && miamiCount >= 5) {
+      setMoney(prev => prev - miamiOverdriveCost);
+      setMiamiLevel(prev => prev + 1);
+      setMiamiOverdriveCost(prev => Math.floor(prev * 2.5));
+    }
+  };
+
+  const buyChillAmplifier = () => {
+    if (money >= chillAmplifierCost && chillGuyCount >= 3) {
+      setMoney(prev => prev - chillAmplifierCost);
+      setChillGuyLevel(prev => prev + 1);
+      setChillAmplifierCost(prev => Math.floor(prev * 2.5));
+    }
+  };
+
   // Tooltip State
   const [tooltip, setTooltip] = useState({ show: false, type: null, content: '', x: 0, y: 0, direction: 'right' });
 
@@ -322,34 +489,108 @@ const Game = () => {
     if (type === 'autoClickerShop') return t('autoClickerDesc');
     if (type === 'miamiShop') return t('miamiDesc');
     if (type === 'chillGuyShop') return t('chillGuyDesc');
+    if (type === 'clickTurboShop') return `${t('clickTurboDesc')}\n${t('level')}: ${clickPowerLevel}`;
+    if (type === 'nyanBoostShop') return `${t('nyanBoostDesc')}\n${t('level')}: ${autoClickerLevel}`;
+    if (type === 'miamiOverdriveShop') return `${t('miamiOverdriveDesc')}\n${t('level')}: ${miamiLevel}`;
+    if (type === 'chillAmplifierShop') return `${t('chillAmplifierDesc')}\n${t('level')}: ${chillGuyLevel}`;
 
     if (type === 'cps') {
       const parts = [];
-      if (autoClickers > 0) parts.push(`AutoClicker: ${formatNumber(autoClickers)}/s`);
-      if (miamiCount > 0) parts.push(`Miami: ${formatNumber(miamiCount * 5)}/s`);
-      if (chillGuyCount > 0) parts.push(`Chill Guy: ${formatNumber(chillGuyCount * 25)}/s`);
+      if (autoClickers > 0) parts.push(`AutoClicker: ${formatNumber(autoClickers * (1 * autoClickerMultiplier))}/s`);
+      if (miamiCount > 0) parts.push(`Miami: ${formatNumber(miamiCount * 5 * miamiMultiplier)}/s`);
+      if (chillGuyCount > 0) parts.push(`Chill Guy: ${formatNumber(chillGuyCount * 25 * chillGuyMultiplier)}/s`);
       return parts.length > 0 ? parts.join('\n') : "0 CP/S";
     }
 
     if (type === 'autoClickerInv') {
-      const individual = 1;
+      const baseIndividual = 1;
+      const individual = baseIndividual * autoClickerMultiplier;
+      const baseTotal = autoClickers * baseIndividual;
       const total = autoClickers * individual;
-      return `${t('autoClicker')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(autoClickersProduced))}`;
+      const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
+      return `${t('autoClicker')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(autoClickersProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     if (type === 'miamiInv') {
-      const individual = 5;
+      const baseIndividual = 5;
+      const individual = baseIndividual * miamiMultiplier;
+      const baseTotal = miamiCount * baseIndividual;
       const total = miamiCount * individual;
-      return `${t('miamiItem')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(miamiProduced))}`;
+      const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
+      return `${t('miamiItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(miamiProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     if (type === 'chillGuyInv') {
-      const individual = 25;
+      const baseIndividual = 25;
+      const individual = baseIndividual * chillGuyMultiplier;
+      const baseTotal = chillGuyCount * baseIndividual;
       const total = chillGuyCount * individual;
-      return `${t('chillGuyItem')}\n${t('each')}: ${individual} CP/S\n${t('total')}: ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(chillGuyProduced))}`;
+      const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
+      return `${t('chillGuyItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(chillGuyProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     return '';
+  };
+
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleResetClick = () => {
+    setShowResetConfirm(true);
+  };
+
+  const cancelReset = () => {
+    setShowResetConfirm(false);
+  };
+
+  const confirmReset = async () => {
+    // Create a reset state that keeps achievements and settings
+    const resetData = {
+      // Reset Economy
+      money: 0,
+      totalClicks: 0,
+
+      // Reset Items
+      autoClickers: 0,
+      autoClickerCost: 25,
+      autoClickersProduced: 0,
+
+      miamiCount: 0,
+      miamiCost: 250,
+      miamiProduced: 0,
+
+      chillGuyCount: 0,
+      chillGuyCost: 2500,
+      chillGuyProduced: 0,
+
+      // Reset Upgrades
+      clickPowerLevel: 0,
+      clickPowerCost: 100,
+
+      autoClickerLevel: 0,
+      autoClickerLevelCost: 500,
+
+      miamiLevel: 0,
+      miamiLevelCost: 2500,
+
+      chillGuyLevel: 0,
+      chillGuyLevelCost: 10000,
+
+      // Reset One-Time Upgrades Costs
+      clickTurboCost: 500,
+      nyanBoostCost: 10000,
+      miamiOverdriveCost: 25000,
+      chillAmplifierCost: 50000,
+
+      // KEEP Achievements and Settings
+      unlockedAchievements: unlockedAchievements,
+      volume: volume,
+      backgroundPlay: backgroundPlay,
+      language: language
+    };
+
+    console.log('Resetting progress, keeping achievements/settings:', resetData);
+    await saveUserData(resetData);
+    window.location.reload();
   };
 
   const renderContent = () => {
@@ -372,62 +613,164 @@ const Game = () => {
               </button>
               <h2>{t('shopTitle')}</h2>
               <div className="shop-items">
-                {/* AutoClicker Item */}
-                <div
-                  className={`shop-item ${money < autoClickerCost ? 'unaffordable' : ''}`}
-                  onMouseEnter={(e) => handleMouseEnter(e, 'autoClickerShop', 'right')}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <span>{t('autoClicker')}</span>
-                  <button
-                    className="buy-btn"
-                    disabled={!gameStarted || money < autoClickerCost}
-                    onClick={buyAutoClicker}
+                {/* Upgrades Section */}
+                <div className="shop-section">
+                  <div className="shop-section-title">MEJORAS</div>
+
+                  {/* Click Turbo */}
+                  <div
+                    className={`shop-item upgrade-item ${money < clickTurboCost ? 'unaffordable' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'clickTurboShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
                   >
-                    {t('buyUpgrade')} (${formatNumber(autoClickerCost)})
-                  </button>
+                    <div className="item-info">
+                      <span className="item-name">{t('clickTurbo')} <span className="level-badge">Lv.{clickPowerLevel}</span></span>
+                      <button
+                        className="buy-btn"
+                        disabled={!gameStarted || money < clickTurboCost}
+                        onClick={buyClickTurbo}
+                      >
+                        {t('upgrade')} (${formatNumber(clickTurboCost)})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nyan Boost */}
+                  <div
+                    className={`shop-item upgrade-item ${money < nyanBoostCost || autoClickers < 10 ? 'unaffordable locked-item' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'nyanBoostShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="item-info">
+                      <span className="item-name">{t('nyanBoost')} <span className="level-badge">Lv.{autoClickerLevel}</span></span>
+                      {autoClickers >= 10 ? (
+                        <button
+                          className="buy-btn"
+                          disabled={!gameStarted || money < nyanBoostCost}
+                          onClick={buyNyanBoost}
+                        >
+                          {t('upgrade')} (${formatNumber(nyanBoostCost)})
+                        </button>
+                      ) : (
+                        <button className="buy-btn locked" disabled>
+                          🔒 {t('nyanBoostReq')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Miami Overdrive */}
+                  <div
+                    className={`shop-item upgrade-item ${money < miamiOverdriveCost || miamiCount < 5 ? 'unaffordable locked-item' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'miamiOverdriveShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="item-info">
+                      <span className="item-name">{t('miamiOverdrive')} <span className="level-badge">Lv.{miamiLevel}</span></span>
+                      {miamiCount >= 5 ? (
+                        <button
+                          className="buy-btn"
+                          disabled={!gameStarted || money < miamiOverdriveCost}
+                          onClick={buyMiamiOverdrive}
+                        >
+                          {t('upgrade')} (${formatNumber(miamiOverdriveCost)})
+                        </button>
+                      ) : (
+                        <button className="buy-btn locked" disabled>
+                          🔒 {t('miamiOverdriveReq')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Chill Amplifier */}
+                  <div
+                    className={`shop-item upgrade-item ${money < chillAmplifierCost || chillGuyCount < 3 ? 'unaffordable locked-item' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'chillAmplifierShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="item-info">
+                      <span className="item-name">{t('chillAmplifier')} <span className="level-badge">Lv.{chillGuyLevel}</span></span>
+                      {chillGuyCount >= 3 ? (
+                        <button
+                          className="buy-btn"
+                          disabled={!gameStarted || money < chillAmplifierCost}
+                          onClick={buyChillAmplifier}
+                        >
+                          {t('upgrade')} (${formatNumber(chillAmplifierCost)})
+                        </button>
+                      ) : (
+                        <button className="buy-btn locked" disabled>
+                          🔒 {t('chillAmplifierReq')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+
                 </div>
-                {/* Miami Item */}
-                <div
-                  className={`shop-item ${money < miamiCost ? 'unaffordable' : ''}`}
-                  onMouseEnter={(e) => handleMouseEnter(e, 'miamiShop', 'right')}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <span>{t('miamiItem')}</span>
-                  {autoClickers >= 5 ? (
+
+                <div className="shop-divider"></div>
+
+                <div className="shop-section">
+                  <div className="shop-section-title">OBJETOS</div>
+                  {/* AutoClicker Item */}
+                  <div
+                    className={`shop-item ${money < autoClickerCost ? 'unaffordable' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'autoClickerShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <span>{t('autoClicker')}</span>
+                    <button
+                      className="buy-btn"
+                      disabled={!gameStarted || money < autoClickerCost}
+                      onClick={buyAutoClicker}
+                    >
+                      {t('buyUpgrade')} (${formatNumber(autoClickerCost)})
+                    </button>
+                  </div>
+                  {/* Miami Item */}
+                  <div
+                    className={`shop-item ${money < miamiCost ? 'unaffordable' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'miamiShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <span>{t('miamiItem')}</span>
+                    {autoClickers >= 5 ? (
                       <button
                         className="buy-btn"
                         disabled={!gameStarted || money < miamiCost}
                         onClick={buyMiamiItem}
                       >
                         {t('buyUpgrade')} (${formatNumber(miamiCost)})
-                    </button>
-                  ) : (
-                    <button className="buy-btn" disabled>
-                      🔒 (Rev: 5 AutoClickers)
-                    </button>
-                  )}
-                </div>
-                {/* Chill Guy Item */}
-                <div
-                  className={`shop-item ${money < chillGuyCost ? 'unaffordable' : ''}`}
-                  onMouseEnter={(e) => handleMouseEnter(e, 'chillGuyShop', 'right')}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <span>{t('chillGuyItem')}</span>
-                  {miamiCount >= 5 ? (
+                      </button>
+                    ) : (
+                      <button className="buy-btn" disabled>
+                        🔒 (Rev: 5 AutoClickers)
+                      </button>
+                    )}
+                  </div>
+                  {/* Chill Guy Item */}
+                  <div
+                    className={`shop-item ${money < chillGuyCost ? 'unaffordable' : ''}`}
+                    onMouseEnter={(e) => handleMouseEnter(e, 'chillGuyShop', 'right')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <span>{t('chillGuyItem')}</span>
+                    {miamiCount >= 5 ? (
                       <button
                         className="buy-btn"
                         disabled={!gameStarted || money < chillGuyCost}
                         onClick={buyChillGuy}
                       >
                         {t('buyUpgrade')} (${formatNumber(chillGuyCost)})
-                    </button>
-                  ) : (
-                    <button className="buy-btn" disabled>
-                      🔒 (Rev: 5 Miami)
-                    </button>
-                  )}
+                      </button>
+                    ) : (
+                      <button className="buy-btn" disabled>
+                        🔒 (Rev: 5 Miami)
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </aside>
@@ -481,7 +824,7 @@ const Game = () => {
                   {/* Removed welcome message and instruction text */}
                   <div className="clicker-container">
                     <img
-                      src="/trollFace.png"
+                      src="/trollface.png"
                       alt="Troll Face"
                       className={`troll-face ${isClicked ? 'clicked' : ''}`}
                       onClick={handleTrollClick}
@@ -550,7 +893,7 @@ const Game = () => {
             </aside>
           </div>
         );
-case 'config':
+      case 'config':
         return (
           <div className="settings-area">
             <button className="nav-arrow-btn" onClick={() => setGameState('menu')}>←</button>
@@ -569,13 +912,19 @@ case 'config':
               <label>{t('backgroundPlay')}</label>
               <p className="setting-description">{t('backgroundPlayDesc')}</p>
               <div className="toggle-container">
-                <button 
+                <button
                   className={`toggle-btn ${backgroundPlay ? 'active' : ''}`}
                   onClick={() => setBackgroundPlay(!backgroundPlay)}
                 >
                   {backgroundPlay ? 'ON' : 'OFF'}
                 </button>
               </div>
+            </div>
+
+            <div className="setting-item dangerous-zone">
+              <button className="reset-btn" onClick={handleResetClick}>
+                ⚠️ {t('resetProgress')}
+              </button>
             </div>
           </div>
         );
@@ -623,6 +972,20 @@ case 'config':
             <div className="modal-actions">
               <button className="btn-secondary" onClick={cancelLogout}>{t('cancel')}</button>
               <button className="btn-primary" onClick={confirmLogout}>{t('confirmLogout')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-content danger-modal">
+            <h2 className="danger-text">{t('resetConfirmTitle')}</h2>
+            <p>{t('resetConfirmMsg')}</p>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={cancelReset}>{t('cancel')}</button>
+              <button className="btn-danger" onClick={confirmReset}>{t('confirmReset')}</button>
             </div>
           </div>
         </div>

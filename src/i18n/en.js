@@ -77,5 +77,32 @@ export const en = {
     chillGuyDesc: "Generates 25 clicks per second",
     each: "Each",
     total: "Total",
-    produced: "Produced"
-};
+    produced: "Produced",
+
+    // Upgrades
+    clickTurbo: "Click Turbo",
+    clickTurboDesc: "Doubles your click power",
+    clickTurboReq: "Req: None",
+    nyanBoost: "Nyan Boost",
+    nyanBoostDesc: "Doubles Nyan Cat production",
+    nyanBoostReq: "Req: 10 Nyan Cats",
+    miamiOverdrive: "Miami Overdrive",
+    miamiOverdriveDesc: "Doubles Miami production",
+    miamiOverdriveReq: "Req: 5 Miami",
+    chillAmplifier: "Chill Amplifier",
+    chillAmplifierDesc: "Doubles Chill Guy production",
+    chillAmplifierReq: "Req: 3 Chill Guys",
+    level: "Level",
+    unlocked: "Unlocked",
+    locked: "Locked",
+    upgrade: "Upgrade",
+    base: "Base",
+    improved: "Upgraded",
+    contribution: "Contribution",
+
+    // Reset
+    resetProgress: "Reset Progress",
+    resetConfirmTitle: "Delete Everything?",
+    resetConfirmMsg: "This action will delete ALL your progress permanently. This cannot be undone.",
+    confirmReset: "Yes, Delete Everything"
+}
