@@ -14,6 +14,11 @@ export const en = {
     password: "Password",
     enterUsername: "Enter your username",
     enterPassword: "Enter your password",
+    invalidCredentials: "Invalid username or password",
+    loginFailed: "Login failed",
+    registerFailed: "Registration failed",
+    usernameExists: "Username already exists",
+    serverError: "Error connecting to server",
 
     // Menu
     clickMe: "Start Waves",
@@ -78,6 +83,25 @@ export const en = {
     each: "Each",
     total: "Total",
     produced: "Produced",
+    upgradesSection: "UPGRADES",
+    itemsSection: "ITEMS",
+    totalClicks: "Total Clicks",
+    cps: "CP/S",
+    perSecond: " /s",
+    unlockedCount: "Unlocked",
+    remaining: "Remaining",
+    unknownState: "Unknown State",
+    miamiUnlockReq: "Req: 5 AutoClickers",
+    chillUnlockReq: "Req: 5 Miami",
+    debugAddMoneyTitle: "Debug: Add $50,000",
+    debugAddMoneyBtn: "DEBUG +$50K",
+    debugSpawnMexiTitle: "Debug: Spawn Mexi Nyan",
+    debugSpawnMexiBtn: "MEXI SPAWN",
+    mexiEventTitle: "Mexican Event",
+    mexiEventDesc: "All production is +20% and Mexican Nyan cats are everywhere.",
+    eventBonus: "Event bonus",
+    mexiDanceMultiplierLabel: "Dancing cat multiplier",
+    playerClicks: "Player clicks",
 
     // Upgrades
     clickTurbo: "Click Turbo",
@@ -104,5 +128,8 @@ export const en = {
     resetProgress: "Reset Progress",
     resetConfirmTitle: "Delete Everything?",
     resetConfirmMsg: "This action will delete ALL your progress permanently. This cannot be undone.",
-    confirmReset: "Yes, Delete Everything"
+    confirmReset: "Yes, Delete Everything",
+    resetButton: "RESET",
+    on: "ON",
+    off: "OFF"
 }

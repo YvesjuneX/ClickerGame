@@ -7,21 +7,29 @@ const Auth = () => {
   const [option, setOption] = useState('login'); // login, register, guest
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { login, register, playAsGuest } = useUser();
   const { t } = useLanguage();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (option === 'login') logicLogin();
-    else if (option === 'register') logicRegister();
+    setError('');
+    if (option === 'login') await logicLogin();
+    else if (option === 'register') await logicRegister();
   };
 
-  const logicLogin = () => {
-    login(username, password);
+  const logicLogin = async () => {
+    const result = await login(username, password);
+    if (!result.ok) {
+      setError(t(result.errorKey || 'loginFailed'));
+    }
   };
 
-  const logicRegister = () => {
-    register(username, password);
+  const logicRegister = async () => {
+    const result = await register(username, password);
+    if (!result.ok) {
+      setError(t(result.errorKey || 'registerFailed'));
+    }
   };
 
   return (
@@ -30,10 +38,17 @@ const Auth = () => {
 
       <div className="glass-card auth-card">
         <div className="auth-options">
-          <button className={option === 'login' ? 'active' : ''} onClick={() => setOption('login')}>{t('login')}</button>
-          <button className={option === 'register' ? 'active' : ''} onClick={() => setOption('register')}>{t('register')}</button>
-          <button className={option === 'guest' ? 'active' : ''} onClick={() => { setOption('guest'); playAsGuest(); }}>{t('guest')}</button>
+          <button className={option === 'login' ? 'active' : ''} onClick={() => { setOption('login'); setError(''); }}>{t('login')}</button>
+          <button className={option === 'register' ? 'active' : ''} onClick={() => { setOption('register'); setError(''); }}>{t('register')}</button>
+          <button className={option === 'guest' ? 'active' : ''} onClick={() => { setOption('guest'); setError(''); playAsGuest(); }}>{t('guest')}</button>
         </div>
+
+        {error && (
+          <div className="auth-alert" role="alert">
+            <span className="auth-alert-icon">!</span>
+            <span className="auth-alert-text">{error}</span>
+          </div>
+        )}
 
         {option !== 'guest' && (
           <form onSubmit={handleSubmit} className="auth-form">

@@ -14,6 +14,12 @@ export const es = {
     password: "Contraseña",
     enterUsername: "Introduce tu usuario",
     enterPassword: "Introduce tu contraseña",
+    invalidCredentials: "Usuario o contrase?a incorrectos",
+    loginFailed: "Error al iniciar sesion",
+    registerFailed: "Error al registrarse",
+    usernameExists: "El usuario ya existe",
+    serverError: "Error al conectar con el servidor",
+
 
     // Menu
     clickMe: "Iniciar Oleadas",
@@ -78,6 +84,25 @@ export const es = {
     each: "Cada uno",
     total: "Total",
     produced: "Generado",
+    upgradesSection: "MEJORAS",
+    itemsSection: "OBJETOS",
+    totalClicks: "Clicks Totales",
+    cps: "CP/S",
+    perSecond: " /s",
+    unlockedCount: "Desbloqueados",
+    remaining: "Faltan",
+    unknownState: "Estado desconocido",
+    miamiUnlockReq: "Req: 5 AutoClickers",
+    chillUnlockReq: "Req: 5 Miami",
+    debugAddMoneyTitle: "Debug: +$50,000",
+    debugAddMoneyBtn: "DEBUG +$50K",
+    debugSpawnMexiTitle: "Debug: Invocar Nyan Mexi",
+    debugSpawnMexiBtn: "INVOCAR MEXI",
+    mexiEventTitle: "Evento Mexicano",
+    mexiEventDesc: "Toda la produccion tiene +20% y aparecen Nyans mexicanos.",
+    eventBonus: "Bono del evento",
+    mexiDanceMultiplierLabel: "Multiplicador del gato bailando",
+    playerClicks: "Clicks del jugador",
 
     // Upgrades
     clickTurbo: "Click Turbo",
@@ -104,5 +129,8 @@ export const es = {
     resetProgress: "Reiniciar Progreso",
     resetConfirmTitle: "¿Borrar todo?",
     resetConfirmMsg: "Esta acción borrará TODO tu progreso permanentemente. No se puede deshacer.",
-    confirmReset: "Sí, Borrar Todo"
+    confirmReset: "Sí, Borrar Todo",
+    resetButton: "REINICIAR",
+    on: "ON",
+    off: "OFF"
 }

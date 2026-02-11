@@ -27,15 +27,15 @@ export const UserProvider = ({ children }) => {
         const newUser = { ...data.user, isGuest: false };
         setUser(newUser);
         localStorage.setItem('clicker_user', JSON.stringify(newUser));
-        return true;
-      } else {
-        alert(data.error || 'Login failed');
-        return false;
+        return { ok: true };
       }
+      if (response.status === 401) {
+        return { ok: false, errorKey: 'invalidCredentials' };
+      }
+      return { ok: false, errorKey: 'loginFailed' };
     } catch (error) {
       console.error('Login error:', error);
-      alert('Error connecting to server');
-      return false;
+      return { ok: false, errorKey: 'serverError' };
     }
   };
 
@@ -51,15 +51,15 @@ export const UserProvider = ({ children }) => {
 
       if (response.ok) {
         // Auto login after register
-        return login(username, password);
-      } else {
-        alert(data.error || 'Registration failed');
-        return false;
+        return await login(username, password);
       }
+      if (response.status === 409) {
+        return { ok: false, errorKey: 'usernameExists' };
+      }
+      return { ok: false, errorKey: 'registerFailed' };
     } catch (error) {
       console.error('Register error:', error);
-      alert('Error connecting to server');
-      return false;
+      return { ok: false, errorKey: 'serverError' };
     }
   };
 

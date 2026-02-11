@@ -71,6 +71,106 @@ const Game = () => {
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [achievementNotification, setAchievementNotification] = useState(null);
 
+  const nyanAudioRef = useRef(null);
+  const miamiAudioRef = useRef(null);
+  const laChonaAudioRef = useRef(null);
+
+  const MEXI_RESPAWN_INTERVAL_MS = 30000;
+  const MEXI_COOLDOWN_MS = 6 * 60 * 1000;
+  const MEXI_EVENT_DURATION_MS = 3 * 60 * 1000 + 15 * 1000;
+
+  const [mexiVisible, setMexiVisible] = useState(false);
+  const [mexiCatTop, setMexiCatTop] = useState(20);
+  const [mexiCatDuration, setMexiCatDuration] = useState(9);
+  const [mexiEventActive, setMexiEventActive] = useState(false);
+  const [mexiDancePos, setMexiDancePos] = useState({ top: 50, left: 50 });
+  const mexiNextAllowedRef = useRef(0);
+  const mexiEventEndRef = useRef(0);
+  const manualClickTimesRef = useRef([]);
+  const [manualCps, setManualCps] = useState(0);
+
+  useEffect(() => {
+    nyanAudioRef.current = new Audio('/nyan-cat_1.mp3');
+    miamiAudioRef.current = new Audio('/miami-me-lo-confirmo.mp3');
+    laChonaAudioRef.current = new Audio('/la_chona.mp3');
+    nyanAudioRef.current.preload = 'auto';
+    miamiAudioRef.current.preload = 'auto';
+    laChonaAudioRef.current.preload = 'auto';
+    const vol = Math.max(0, Math.min(1, volume / 100));
+    nyanAudioRef.current.volume = vol;
+    miamiAudioRef.current.volume = vol;
+    laChonaAudioRef.current.volume = vol;
+
+    return () => {
+      if (nyanAudioRef.current) {
+        nyanAudioRef.current.pause();
+        nyanAudioRef.current.currentTime = 0;
+      }
+      if (miamiAudioRef.current) {
+        miamiAudioRef.current.pause();
+        miamiAudioRef.current.currentTime = 0;
+      }
+      if (laChonaAudioRef.current) {
+        laChonaAudioRef.current.pause();
+        laChonaAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const vol = Math.max(0, Math.min(1, volume / 100));
+    if (nyanAudioRef.current) nyanAudioRef.current.volume = vol;
+    if (miamiAudioRef.current) miamiAudioRef.current.volume = vol;
+    if (laChonaAudioRef.current) laChonaAudioRef.current.volume = vol;
+  }, [volume]);
+
+  const playIfIdle = (audioRef) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused && !audio.ended) return;
+    audio.currentTime = 0;
+    audio.play().catch(() => { });
+  };
+
+  const playFromStart = (audioRef) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.play().catch(() => { });
+  };
+
+  const getMexiBonus = () => (mexiEventActive ? 1.2 : 1);
+
+  const spawnMexiCat = () => {
+    if (mexiVisible || mexiEventActive) return;
+    const top = Math.random() * 40 + 10;
+    const duration = Math.random() * 4 + 7;
+    setMexiCatTop(top);
+    setMexiCatDuration(duration);
+    setMexiVisible(true);
+  };
+
+  const recordManualClicks = (count) => {
+    const now = Date.now();
+    for (let i = 0; i < count; i += 1) {
+      manualClickTimesRef.current.push(now);
+    }
+  };
+
+  const startMexiEvent = () => {
+    const now = Date.now();
+    mexiNextAllowedRef.current = now + MEXI_COOLDOWN_MS;
+    mexiEventEndRef.current = now + MEXI_EVENT_DURATION_MS;
+    setMexiVisible(false);
+    setMexiEventActive(true);
+    setMexiDancePos({
+      top: Math.random() * 60 + 15,
+      left: Math.random() * 60 + 15
+    });
+    playFromStart(laChonaAudioRef);
+  };
+
   const achievements = [
     { id: 'first_click', name: t('firstClickName'), description: t('firstClickDesc'), target: 1, current: totalClicks, type: 'clicks' },
     { id: '100_clicks', name: t('clicks100Name'), description: t('clicks100Desc'), target: 100, current: totalClicks, type: 'clicks' },
@@ -116,6 +216,7 @@ const Game = () => {
   const totalCPS = (autoClickers * autoClickerMultiplier) +
     (miamiCount * 5 * miamiMultiplier) +
     (chillGuyCount * 25 * chillGuyMultiplier);
+  const displayedCPS = totalCPS + manualCps;
 
   // Click power: each level adds +1 click, doubled by upgrade level
   const clickPower = (1 + clickPowerLevel) * Math.pow(2, clickPowerLevel);
@@ -142,7 +243,7 @@ const Game = () => {
         lastTimeRef.current = now;
 
         if (dt > 0) {
-          const amountToProduce = totalCPS * dt;
+          const amountToProduce = totalCPS * dt * getMexiBonus();
           accumulatorRef.current += amountToProduce;
 
           const wholeAmount = Math.floor(accumulatorRef.current);
@@ -298,8 +399,12 @@ const Game = () => {
       setGameStarted(true);
       lastTimeRef.current = Date.now();
     } else {
-      setMoney(prev => prev + clickPower);
-      setTotalClicks(prev => prev + 1);
+      const bonus = getMexiBonus();
+      const clickGain = Math.floor(clickPower * bonus);
+      const totalGain = Math.floor(1 * bonus);
+      setMoney(prev => prev + clickGain);
+      setTotalClicks(prev => prev + totalGain);
+      recordManualClicks(totalGain);
     }
   };
 
@@ -342,14 +447,18 @@ const Game = () => {
     // log(2) ~= 0.7 -> max 3
     // log(10) ~= 2.3 -> max 6
     // log(50) ~= 3.9 -> max 9
-    const maxCats = 2 + Math.floor(Math.log(autoClickers + 1) * 2);
+    const baseMaxCats = 2 + Math.floor(Math.log(autoClickers + 1) * 2);
+    const maxCats = mexiEventActive ? baseMaxCats * 3 : baseMaxCats;
+
+    const spawnIntervalMs = mexiEventActive ? 400 : 1000;
+    const spawnChance = mexiEventActive ? 0.9 : 0.6;
 
     const spawnInterval = setInterval(() => {
       setFloatingCats(prev => {
         if (prev.length >= maxCats) return prev;
 
         // Chance to spawn depends on how empty it is compared to max
-        if (Math.random() > 0.4) return prev; // 60% skip chance to add randomness
+        if (Math.random() > spawnChance) return prev; // Higher chance during event
 
         // Avoid center (30%-70%) to not overlap Troll Face
         const isTop = Math.random() > 0.5;
@@ -358,15 +467,15 @@ const Game = () => {
         const newCat = {
           id: Date.now() + Math.random(),
           top: top,
-          duration: Math.random() * 5 + 7, // 7s to 12s speed (Slower for majesty)
-          size: Math.random() * 60 + 90 // Larger: 90px to 150px
+          duration: Math.random() * 5 + (mexiEventActive ? 4 : 7),
+          size: Math.random() * 60 + (mexiEventActive ? 110 : 90)
         };
         return [...prev, newCat];
       });
-    }, 1000); // Check every second
+    }, spawnIntervalMs);
 
     return () => clearInterval(spawnInterval);
-  }, [gameStarted, autoClickers]);
+  }, [gameStarted, autoClickers, mexiEventActive]);
 
   const removeFloatingCat = (id) => {
     setFloatingCats(prev => prev.filter(cat => cat.id !== id));
@@ -376,8 +485,11 @@ const Game = () => {
     e.stopPropagation(); // Prevent triggering area click
     if (gameStarted) {
       // Double click effect
-      setMoney(prev => prev + 2);
-      setTotalClicks(prev => prev + 2);
+      const bonus = getMexiBonus();
+      const gain = Math.floor(2 * bonus);
+      setMoney(prev => prev + gain);
+      setTotalClicks(prev => prev + gain);
+      recordManualClicks(gain);
 
       // Clear existing timeout to reset animation if clicked fast
       if (boostTimeoutRef.current) {
@@ -396,6 +508,7 @@ const Game = () => {
       setAutoClickers(prev => prev + 1);
       // Increase cost by 20% each time (rounded)
       setAutoClickerCost(prev => Math.floor(prev * 1.5));
+      playIfIdle(nyanAudioRef);
     }
   };
 
@@ -404,8 +517,74 @@ const Game = () => {
       setMoney(prev => prev - miamiCost);
       setMiamiCount(prev => prev + 1);
       setMiamiCost(prev => Math.floor(prev * 1.5));
+      playIfIdle(miamiAudioRef);
     }
   };
+
+  const handleMexiDanceClick = (e) => {
+    e.stopPropagation();
+    if (!gameStarted) return;
+    const bonus = getMexiBonus();
+    const turboMultiplier = Math.max(1, clickPowerLevel);
+    const reward = 10 * turboMultiplier;
+    const gain = Math.floor(reward * bonus);
+    setMoney(prev => prev + gain);
+    setTotalClicks(prev => prev + gain);
+    recordManualClicks(gain);
+  };
+
+  const forceMexiSpawn = (e) => {
+    e.stopPropagation();
+    if (!gameStarted) return;
+    spawnMexiCat();
+  };
+
+  useEffect(() => {
+    if (gameState !== 'play' || !gameStarted || mexiEventActive) return;
+
+    const interval = setInterval(() => {
+      if (mexiVisible) return;
+      const now = Date.now();
+      if (now < mexiNextAllowedRef.current) return;
+      spawnMexiCat();
+    }, MEXI_RESPAWN_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [gameState, gameStarted, mexiEventActive, mexiVisible]);
+
+  useEffect(() => {
+    if (!mexiEventActive) return;
+
+    const moveInterval = setInterval(() => {
+      setMexiDancePos({
+        top: Math.random() * 60 + 15,
+        left: Math.random() * 60 + 15
+      });
+    }, 10000);
+
+    const endTimeout = setTimeout(() => {
+      setMexiEventActive(false);
+      if (laChonaAudioRef.current) {
+        laChonaAudioRef.current.pause();
+        laChonaAudioRef.current.currentTime = 0;
+      }
+    }, MEXI_EVENT_DURATION_MS);
+
+    return () => {
+      clearInterval(moveInterval);
+      clearTimeout(endTimeout);
+    };
+  }, [mexiEventActive]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      manualClickTimesRef.current = manualClickTimesRef.current.filter((t) => now - t <= 1000);
+      setManualCps(manualClickTimesRef.current.length);
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const buyChillGuy = () => {
     if (money >= chillGuyCost) {
@@ -486,9 +665,21 @@ const Game = () => {
 
     if (content) return content; // Fallback for static content
 
-    if (type === 'autoClickerShop') return t('autoClickerDesc');
-    if (type === 'miamiShop') return t('miamiDesc');
-    if (type === 'chillGuyShop') return t('chillGuyDesc');
+    const autoClickerBonus = formatNumber(1 * autoClickerMultiplier * 0.2);
+    const miamiBonus = formatNumber(5 * miamiMultiplier * 0.2);
+    const chillBonus = formatNumber(25 * chillGuyMultiplier * 0.2);
+    if (type === 'autoClickerShop') {
+      const extra = mexiEventActive ? `\n${t('eventBonus')}: +${autoClickerBonus} ${t('cps')}` : '';
+      return t('autoClickerDesc') + extra;
+    }
+    if (type === 'miamiShop') {
+      const extra = mexiEventActive ? `\n${t('eventBonus')}: +${miamiBonus} ${t('cps')}` : '';
+      return t('miamiDesc') + extra;
+    }
+    if (type === 'chillGuyShop') {
+      const extra = mexiEventActive ? `\n${t('eventBonus')}: +${chillBonus} ${t('cps')}` : '';
+      return t('chillGuyDesc') + extra;
+    }
     if (type === 'clickTurboShop') return `${t('clickTurboDesc')}\n${t('level')}: ${clickPowerLevel}`;
     if (type === 'nyanBoostShop') return `${t('nyanBoostDesc')}\n${t('level')}: ${autoClickerLevel}`;
     if (type === 'miamiOverdriveShop') return `${t('miamiOverdriveDesc')}\n${t('level')}: ${miamiLevel}`;
@@ -496,10 +687,15 @@ const Game = () => {
 
     if (type === 'cps') {
       const parts = [];
-      if (autoClickers > 0) parts.push(`AutoClicker: ${formatNumber(autoClickers * (1 * autoClickerMultiplier))}/s`);
-      if (miamiCount > 0) parts.push(`Miami: ${formatNumber(miamiCount * 5 * miamiMultiplier)}/s`);
-      if (chillGuyCount > 0) parts.push(`Chill Guy: ${formatNumber(chillGuyCount * 25 * chillGuyMultiplier)}/s`);
-      return parts.length > 0 ? parts.join('\n') : "0 CP/S";
+      if (autoClickers > 0) parts.push(`${t('autoClicker')}: ${formatNumber(autoClickers * (1 * autoClickerMultiplier))}${t('perSecond')}`);
+      if (miamiCount > 0) parts.push(`${t('miamiItem')}: ${formatNumber(miamiCount * 5 * miamiMultiplier)}${t('perSecond')}`);
+      if (chillGuyCount > 0) parts.push(`${t('chillGuyItem')}: ${formatNumber(chillGuyCount * 25 * chillGuyMultiplier)}${t('perSecond')}`);
+      if (manualCps > 0) parts.push(`${t('playerClicks')}: ${formatNumber(manualCps)}${t('perSecond')}`);
+      const base = parts.length > 0 ? parts.join('\n') : `0 ${t('cps')}`;
+      if (mexiEventActive) {
+        return `${base}\n${t('eventBonus')}: +20%`;
+      }
+      return base;
     }
 
     if (type === 'autoClickerInv') {
@@ -508,7 +704,8 @@ const Game = () => {
       const baseTotal = autoClickers * baseIndividual;
       const total = autoClickers * individual;
       const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
-      return `${t('autoClicker')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(autoClickersProduced))}\n${t('contribution')}: ${contribution}`;
+      const bonusLine = mexiEventActive ? `\n${t('eventBonus')}: +${formatNumber((autoClickers * individual) * 0.2)} ${t('cps')}` : '';
+      return `${t('autoClicker')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} ${t('cps')}\n${t('each')} (${t('improved')}): ${formatNumber(individual)} ${t('cps')}\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} ${t('cps')}\n${t('total')} (${t('improved')}): ${formatNumber(total)} ${t('cps')}${bonusLine}\n${t('produced')}: ${formatNumber(Math.floor(autoClickersProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     if (type === 'miamiInv') {
@@ -517,7 +714,8 @@ const Game = () => {
       const baseTotal = miamiCount * baseIndividual;
       const total = miamiCount * individual;
       const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
-      return `${t('miamiItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(miamiProduced))}\n${t('contribution')}: ${contribution}`;
+      const bonusLine = mexiEventActive ? `\n${t('eventBonus')}: +${formatNumber((miamiCount * individual) * 0.2)} ${t('cps')}` : '';
+      return `${t('miamiItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} ${t('cps')}\n${t('each')} (${t('improved')}): ${formatNumber(individual)} ${t('cps')}\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} ${t('cps')}\n${t('total')} (${t('improved')}): ${formatNumber(total)} ${t('cps')}${bonusLine}\n${t('produced')}: ${formatNumber(Math.floor(miamiProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     if (type === 'chillGuyInv') {
@@ -526,7 +724,8 @@ const Game = () => {
       const baseTotal = chillGuyCount * baseIndividual;
       const total = chillGuyCount * individual;
       const contribution = totalCPS > 0 ? ((total / totalCPS) * 100).toFixed(1) + '%' : '0%';
-      return `${t('chillGuyItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} CP/S\n${t('each')} (${t('improved')}): ${formatNumber(individual)} CP/S\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} CP/S\n${t('total')} (${t('improved')}): ${formatNumber(total)} CP/S\n${t('produced')}: ${formatNumber(Math.floor(chillGuyProduced))}\n${t('contribution')}: ${contribution}`;
+      const bonusLine = mexiEventActive ? `\n${t('eventBonus')}: +${formatNumber((chillGuyCount * individual) * 0.2)} ${t('cps')}` : '';
+      return `${t('chillGuyItem')}\n${t('each')} (${t('base')}): ${formatNumber(baseIndividual)} ${t('cps')}\n${t('each')} (${t('improved')}): ${formatNumber(individual)} ${t('cps')}\n${t('total')} (${t('base')}): ${formatNumber(baseTotal)} ${t('cps')}\n${t('total')} (${t('improved')}): ${formatNumber(total)} ${t('cps')}${bonusLine}\n${t('produced')}: ${formatNumber(Math.floor(chillGuyProduced))}\n${t('contribution')}: ${contribution}`;
     }
 
     return '';
@@ -615,7 +814,7 @@ const Game = () => {
               <div className="shop-items">
                 {/* Upgrades Section */}
                 <div className="shop-section">
-                  <div className="shop-section-title">MEJORAS</div>
+                  <div className="shop-section-title">{t('upgradesSection')}</div>
 
                   {/* Click Turbo */}
                   <div
@@ -713,7 +912,7 @@ const Game = () => {
                 <div className="shop-divider"></div>
 
                 <div className="shop-section">
-                  <div className="shop-section-title">OBJETOS</div>
+                  <div className="shop-section-title">{t('itemsSection')}</div>
                   {/* AutoClicker Item */}
                   <div
                     className={`shop-item ${money < autoClickerCost ? 'unaffordable' : ''}`}
@@ -746,7 +945,7 @@ const Game = () => {
                       </button>
                     ) : (
                       <button className="buy-btn" disabled>
-                        🔒 (Rev: 5 AutoClickers)
+                        🔒 {t('miamiUnlockReq')}
                       </button>
                     )}
                   </div>
@@ -767,7 +966,7 @@ const Game = () => {
                       </button>
                     ) : (
                       <button className="buy-btn" disabled>
-                        🔒 (Rev: 5 Miami)
+                        🔒 {t('chillUnlockReq')}
                       </button>
                     )}
                   </div>
@@ -778,16 +977,31 @@ const Game = () => {
               className={`game-main-area glass-card ${gameStarted ? 'active-click-area' : 'start-overlay'}`}
               onClick={handleAreaClick}
             >
+              {mexiEventActive && (
+                <div
+                  className="mexi-event-badge"
+                  data-tooltip={`${t('mexiEventDesc')}\n${t('mexiDanceMultiplierLabel')}: x${Math.max(1, clickPowerLevel)}`}
+                >
+                  {t('mexiEventTitle')} x{Math.max(1, clickPowerLevel)}
+                </div>
+              )}
               <div className={`game-header-stats ${!gameStarted ? 'dimmed' : ''}`}>
                 <div className="stats-container">
                   <span className="money-counter">${formatNumber(money)}</span>
-                  <span className="total-clicks-counter">Total Clicks: {formatNumber(totalClicks)}</span>
+                  <span className="total-clicks-counter">{t('totalClicks')}: {formatNumber(totalClicks)}</span>
                   <button
                     className="debug-btn"
                     onClick={(e) => { e.stopPropagation(); setMoney(prev => prev + 50000); }}
-                    title="Debug: Add $50,000"
+                    title={t('debugAddMoneyTitle')}
                   >
-                    🐛 +$50K
+                    {t('debugAddMoneyBtn')}
+                  </button>
+                  <button
+                    className="debug-btn"
+                    onClick={forceMexiSpawn}
+                    title={t('debugSpawnMexiTitle')}
+                  >
+                    {t('debugSpawnMexiBtn')}
                   </button>
                 </div>
                 <div
@@ -795,7 +1009,7 @@ const Game = () => {
                   onMouseEnter={(e) => handleMouseEnter(e, 'cps', 'left')}
                   onMouseLeave={handleMouseLeave}
                 >
-                  {formatNumber(totalCPS)} CP/S
+                  {formatNumber(mexiEventActive ? displayedCPS * 1.2 : displayedCPS)} {t('cps')}
                 </div>
               </div>
 
@@ -809,7 +1023,7 @@ const Game = () => {
                   {floatingCats.map(cat => (
                     <img
                       key={cat.id}
-                      src="/nyancat.gif"
+                      src={mexiEventActive ? "/nyan_cat_mexi.gif" : "/nyancat.gif"}
                       className="floating-nyan-cat"
                       style={{
                         top: `${cat.top}%`,
@@ -821,10 +1035,37 @@ const Game = () => {
                     />
                   ))}
 
+                  {mexiVisible && (
+                    <img
+                      src="/nyan_cat_mexi.gif"
+                      className="floating-nyan-cat mexi-nyan-cat"
+                      style={{
+                        top: `${mexiCatTop}%`,
+                        animation: `flyRight ${mexiCatDuration}s linear forwards`
+                      }}
+                      onClick={(e) => { e.stopPropagation(); startMexiEvent(); }}
+                      onAnimationEnd={() => setMexiVisible(false)}
+                      alt=""
+                    />
+                  )}
+
+                  {mexiEventActive && (
+                    <img
+                      src="/gato_bailando.gif"
+                      className="mexi-dance-cat"
+                      style={{
+                        top: `${mexiDancePos.top}%`,
+                        left: `${mexiDancePos.left}%`
+                      }}
+                      onClick={handleMexiDanceClick}
+                      alt=""
+                    />
+                  )}
+
                   {/* Removed welcome message and instruction text */}
                   <div className="clicker-container">
                     <img
-                      src="/trollface.png"
+                      src="/trollFace.png"
                       alt="Troll Face"
                       className={`troll-face ${isClicked ? 'clicked' : ''}`}
                       onClick={handleTrollClick}
@@ -905,27 +1146,37 @@ const Game = () => {
                 min="0"
                 max="100"
                 value={volume}
-                onChange={(e) => setVolume(e.target.value)}
+                onChange={(e) => setVolume(Number(e.target.value))}
               />
             </div>
-            <div className="setting-item">
-              <label>{t('backgroundPlay')}</label>
-              <p className="setting-description">{t('backgroundPlayDesc')}</p>
-              <div className="toggle-container">
+                        <div className="setting-item">
+              <div
+                className="setting-row"
+                data-tooltip={t('backgroundPlayDesc')}
+              >
+                <span className="setting-label">{t('backgroundPlay')}</span>
                 <button
                   className={`toggle-btn ${backgroundPlay ? 'active' : ''}`}
                   onClick={() => setBackgroundPlay(!backgroundPlay)}
                 >
-                  {backgroundPlay ? 'ON' : 'OFF'}
+                  {backgroundPlay ? t('on') : t('off')}
                 </button>
               </div>
             </div>
 
-            <div className="setting-item dangerous-zone">
-              <button className="reset-btn" onClick={handleResetClick}>
-                ⚠️ {t('resetProgress')}
-              </button>
+
+                        <div className="setting-item dangerous-zone">
+              <div
+                className="setting-row"
+                data-tooltip={t('resetConfirmMsg')}
+              >
+                <span className="setting-label">{t('resetProgress')}</span>
+                <button className="toggle-btn" onClick={handleResetClick}>
+                  {t('resetButton')}
+                </button>
+              </div>
             </div>
+
           </div>
         );
       case 'language':
@@ -950,7 +1201,7 @@ const Game = () => {
           </div>
         );
       default:
-        return <div>Unknown State</div>;
+        return <div>{t('unknownState')}</div>;
     }
   };
 
@@ -1008,7 +1259,7 @@ const Game = () => {
             <button className="close-trophies" onClick={() => setShowTrophies(false)}>✕</button>
           </div>
           <div className="trophies-progress-summary">
-            <span className="progress-text">{unlockedAchievements.length} / {achievements.length} Desbloqueados</span>
+            <span className="progress-text">{unlockedAchievements.length} / {achievements.length} {t('unlockedCount')}</span>
             <div className="progress-bar-container">
               <div className="progress-bar-fill" style={{ width: `${(unlockedAchievements.length / achievements.length) * 100}%` }}></div>
             </div>
@@ -1023,13 +1274,13 @@ const Game = () => {
                   <h3>{achievement.name}</h3>
                   <p>{achievement.description}</p>
                   {isUnlocked ? (
-                    <span className="trophy-date">Desbloqueado</span>
+                    <span className="trophy-date">{t('unlocked')}</span>
                   ) : (
                     <div className="trophy-progress">
                       <div className="progress-bar">
                         <div className="progress-fill" style={{ width: `${progress}%` }}></div>
                       </div>
-                      <span className="progress-remaining">Faltan: {formatNumber(remaining)}</span>
+                      <span className="progress-remaining">{t('remaining')}: {formatNumber(remaining)}</span>
                     </div>
                   )}
                 </div>
