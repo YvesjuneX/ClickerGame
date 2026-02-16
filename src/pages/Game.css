@@ -8,6 +8,7 @@
     overflow: hidden;
 }
 
+
 .back-button {
     position: absolute;
     top: 20px;
@@ -564,20 +565,8 @@
     transform: scale(1.05);
 }
 
-.game-main-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-    color: white;
-}
+/* Consolidated into line 1035 */
+
 
 .game-header {
     position: absolute;
@@ -949,10 +938,8 @@
 }
 
 /* Ensure the main area also doesn't trigger selection easily */
-.game-main-area {
-    user-select: none;
-    -webkit-user-select: none;
-}
+/* Consolidated into line 1035 */
+
 
 .click-instruction {
     font-size: 1.2rem;
@@ -1029,20 +1016,24 @@
 /* Main Area - Center */
 .game-main-area {
     flex: 1;
-    /* Takes remaining space */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.1);
+    background-image: url('/fondo.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
     backdrop-filter: blur(10px);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     color: white;
     overflow: hidden;
-    /* Constrain floating cats */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .mexi-event-badge {
@@ -1226,6 +1217,7 @@
 .troll-face {
     width: 220px;
     height: 220px;
+    z-index: 10;
     cursor: pointer;
     transition: transform 0.05s ease-in-out;
     /* Fast transition for click effect */
@@ -1397,10 +1389,6 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
-to {
-    left: 100%;
-}
-}
 
 /* Achievement Notification - Play Store Style */
 .achievement-notification {
@@ -1469,7 +1457,7 @@ to {
     color: white;
     font-weight: 700;
 }
-}
+
 
 /* DANGER ZONE */
 .dangerous-zone {

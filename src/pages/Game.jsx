@@ -13,8 +13,32 @@ const formatNumber = (num) => {
     const millions = num / 1000000;
     return millions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'M';
   }
-  const billions = num / 1000000000;
-  return billions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'B';
+  if (num < 1000000000000) {
+    const billions = num / 1000000000;
+    return billions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'B';
+  }
+  if (num < 1000000000000000) {
+    const trillions = num / 1000000000000;
+    return trillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'T';
+  }
+  if (num < 1000000000000000000) {
+    const quadrillions = num / 1000000000000000;
+    return quadrillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'Qa';
+  }
+  if (num < 1000000000000000000000) {
+    const quintillions = num / 1000000000000000000;
+    return quintillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'Qi';
+  }
+  if (num < 1000000000000000000000000) {
+    const sextillions = num / 1000000000000000000000;
+    return sextillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'Sx';
+  }
+  if (num < 1000000000000000000000000000) {
+    const septillions = num / 1000000000000000000000000;
+    return septillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'Sp';
+  }
+  const octillions = num / 1000000000000000000000000000;
+  return octillions.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + 'Oc';
 };
 
 const Game = () => {
@@ -158,16 +182,34 @@ const Game = () => {
     }
   };
 
+  const getRandomSafePosition = () => {
+    // Avoid center area (approx 35% - 65%) where Troll Face is.
+    // ALSO Avoid Top area (0% - 25%) where Stats/Buttons are.
+    // ADDED: Avoid edges (keep at least 10% buffer AND account for img size ~15%)
+    const zones = [
+      // Left Flank
+      { minTop: 30, maxTop: 70, minLeft: 5, maxLeft: 15 },
+      // Right Flank
+      { minTop: 30, maxTop: 70, minLeft: 65, maxLeft: 75 },
+      // Bottom Area (Center-ish)
+      { minTop: 70, maxTop: 75, minLeft: 30, maxLeft: 55 }
+    ];
+
+    const zone = zones[Math.floor(Math.random() * zones.length)];
+
+    return {
+      top: Math.random() * (zone.maxTop - zone.minTop) + zone.minTop,
+      left: Math.random() * (zone.maxLeft - zone.minLeft) + zone.minLeft
+    };
+  };
+
   const startMexiEvent = () => {
     const now = Date.now();
     mexiNextAllowedRef.current = now + MEXI_COOLDOWN_MS;
     mexiEventEndRef.current = now + MEXI_EVENT_DURATION_MS;
     setMexiVisible(false);
     setMexiEventActive(true);
-    setMexiDancePos({
-      top: Math.random() * 60 + 15,
-      left: Math.random() * 60 + 15
-    });
+    setMexiDancePos(getRandomSafePosition());
     playFromStart(laChonaAudioRef);
   };
 
@@ -506,8 +548,8 @@ const Game = () => {
     if (money >= autoClickerCost) {
       setMoney(prev => prev - autoClickerCost);
       setAutoClickers(prev => prev + 1);
-      // Increase cost by 20% each time (rounded)
-      setAutoClickerCost(prev => Math.floor(prev * 1.5));
+      // Increase cost by 35% each time (was 50%)
+      setAutoClickerCost(prev => Math.floor(prev * 1.35));
       playIfIdle(nyanAudioRef);
     }
   };
@@ -516,7 +558,7 @@ const Game = () => {
     if (money >= miamiCost) {
       setMoney(prev => prev - miamiCost);
       setMiamiCount(prev => prev + 1);
-      setMiamiCost(prev => Math.floor(prev * 1.5));
+      setMiamiCost(prev => Math.floor(prev * 1.35));
       playIfIdle(miamiAudioRef);
     }
   };
@@ -556,10 +598,7 @@ const Game = () => {
     if (!mexiEventActive) return;
 
     const moveInterval = setInterval(() => {
-      setMexiDancePos({
-        top: Math.random() * 60 + 15,
-        left: Math.random() * 60 + 15
-      });
+      setMexiDancePos(getRandomSafePosition());
     }, 10000);
 
     const endTimeout = setTimeout(() => {
@@ -590,7 +629,7 @@ const Game = () => {
     if (money >= chillGuyCost) {
       setMoney(prev => prev - chillGuyCost);
       setChillGuyCount(prev => prev + 1);
-      setChillGuyCost(prev => Math.floor(prev * 1.5));
+      setChillGuyCost(prev => Math.floor(prev * 1.35));
     }
   };
 
@@ -598,7 +637,7 @@ const Game = () => {
     if (money >= clickTurboCost) {
       setMoney(prev => prev - clickTurboCost);
       setClickPowerLevel(prev => prev + 1);
-      setClickTurboCost(prev => Math.floor(prev * 2.5));
+      setClickTurboCost(prev => Math.floor(prev * 1.8));
     }
   };
 
@@ -606,7 +645,7 @@ const Game = () => {
     if (money >= nyanBoostCost && autoClickers >= 10) {
       setMoney(prev => prev - nyanBoostCost);
       setAutoClickerLevel(prev => prev + 1);
-      setNyanBoostCost(prev => Math.floor(prev * 2.5));
+      setNyanBoostCost(prev => Math.floor(prev * 1.8));
     }
   };
 
@@ -614,7 +653,7 @@ const Game = () => {
     if (money >= miamiOverdriveCost && miamiCount >= 5) {
       setMoney(prev => prev - miamiOverdriveCost);
       setMiamiLevel(prev => prev + 1);
-      setMiamiOverdriveCost(prev => Math.floor(prev * 2.5));
+      setMiamiOverdriveCost(prev => Math.floor(prev * 1.8));
     }
   };
 
@@ -622,7 +661,7 @@ const Game = () => {
     if (money >= chillAmplifierCost && chillGuyCount >= 3) {
       setMoney(prev => prev - chillAmplifierCost);
       setChillGuyLevel(prev => prev + 1);
-      setChillAmplifierCost(prev => Math.floor(prev * 2.5));
+      setChillAmplifierCost(prev => Math.floor(prev * 1.8));
     }
   };
 
@@ -998,6 +1037,13 @@ const Game = () => {
                   </button>
                   <button
                     className="debug-btn"
+                    onClick={(e) => { e.stopPropagation(); setMoney(prev => prev + 1000000000000000000); }}
+                    title="Add 1 Quintillion"
+                  >
+                    +1 Qi
+                  </button>
+                  <button
+                    className="debug-btn"
                     onClick={forceMexiSpawn}
                     title={t('debugSpawnMexiTitle')}
                   >
@@ -1065,7 +1111,7 @@ const Game = () => {
                   {/* Removed welcome message and instruction text */}
                   <div className="clicker-container">
                     <img
-                      src="/trollFace.png"
+                      src="/trollface.png"
                       alt="Troll Face"
                       className={`troll-face ${isClicked ? 'clicked' : ''}`}
                       onClick={handleTrollClick}
@@ -1149,7 +1195,7 @@ const Game = () => {
                 onChange={(e) => setVolume(Number(e.target.value))}
               />
             </div>
-                        <div className="setting-item">
+            <div className="setting-item">
               <div
                 className="setting-row"
                 data-tooltip={t('backgroundPlayDesc')}
@@ -1165,7 +1211,7 @@ const Game = () => {
             </div>
 
 
-                        <div className="setting-item dangerous-zone">
+            <div className="setting-item dangerous-zone">
               <div
                 className="setting-row"
                 data-tooltip={t('resetConfirmMsg')}
